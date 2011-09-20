@@ -1,0 +1,8 @@
+(compile -s -O2 -d0 -lgit2 git-lolevel.scm -J)
+(compile -s -O2 -d0 git-lolevel.import.scm)
+(compile -s -O2 -d0 -lgit2 git.scm -J)
+(compile -s -O2 -d0 git.import.scm)
+(install-extension 'git
+  '("git-lolevel.so" "git-lolevel.import.so"
+    "git.so" "git.import.so")
+  '((version "0.0.1")))
