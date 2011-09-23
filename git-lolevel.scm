@@ -7,8 +7,8 @@
 ;; Nowhere near complete. Don't use this.
 
 (module git-lolevel *
-  (import scheme chicken foreign)
-  (use lolevel)
+  (import scheme lolevel foreign foreigners
+    (except chicken repository-path))
 
 ;; Errors are composite conditions
 ;; of properties (exn git).
@@ -21,9 +21,9 @@
 ;; Check retval, signal an error when nonzero.
 (define-syntax guard-errors
   (syntax-rules ()
-    ((_ <loc> <exp1> <expn> ...)
-     (begin (when (< <exp1> 0) (git-error <loc> (lasterror)))
-            (when (< <expn> 0) (git-error <loc> (lasterror))) ...))))
+    ((_ <loc> <exp>)
+     (let ((res <exp>))
+       (if (< res 0) (git-error <loc> (lasterror)) res)))))
 
 ;; This could be compacted a bit more later, but for
 ;; right now we'll keep syntax-rules for readability.
@@ -36,6 +36,14 @@
            ((foreign-lambda int <cfun> (c-pointer <rtype>) <atype> ...)
               (location object) <arg> ...))
          object)))))
+
+;; Same.
+(define-syntax define/retval
+  (syntax-rules ()
+    ((_  <name> (<cfun> (<atype> <arg>) ...))
+     (define (<name> <arg> ...)
+       (guard-errors '<name>
+         ((foreign-lambda int <cfun> <atype> ...) <arg> ...))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git2.h
@@ -54,23 +62,25 @@
 (define-foreign-type object         (c-pointer "git_object"))
 (define-foreign-type odb            (c-pointer "git_odb"))
 (define-foreign-type oid            (c-pointer "git_oid"))
+(define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
 (define-foreign-type signature      (c-pointer "git_signature"))
 (define-foreign-type time           (c-pointer "git_time_t"))
 (define-foreign-type tree           (c-pointer "git_tree"))
 
-(define-foreign-type otype int)
-(define obj/any       (foreign-value GIT_OBJ_ANY int))
-(define obj/bad       (foreign-value GIT_OBJ_BAD int))
-(define obj/ext1      (foreign-value GIT_OBJ__EXT1 int))
-(define obj/commit    (foreign-value GIT_OBJ_COMMIT int))
-(define obj/tree      (foreign-value GIT_OBJ_TREE int))
-(define obj/blob      (foreign-value GIT_OBJ_BLOB int))
-(define obj/tag       (foreign-value GIT_OBJ_TAG int))
-(define obj/ext2      (foreign-value GIT_OBJ__EXT2 int))
-(define obj/ofs-delta (foreign-value GIT_OBJ_OFS_DELTA int))
-(define obj/ref-delta (foreign-value GIT_OBJ_REF_DELTA int))
+(define-foreign-enum-type (otype int)
+  (otype->int int->otype)
+  ((any       otype/any)       GIT_OBJ_ANY)
+  ((bad       otype/bad)       GIT_OBJ_BAD)
+  ((ext1      otype/ext1)      GIT_OBJ__EXT1)
+  ((commit    otype/commit)    GIT_OBJ_COMMIT)
+  ((tree      otype/tree)      GIT_OBJ_TREE)
+  ((blob      otype/blob)      GIT_OBJ_BLOB)
+  ((tag       otype/tag)       GIT_OBJ_TAG)
+  ((ext2      otype/ext2)      GIT_OBJ__EXT2)
+  ((ofs-delta otype/ofs-delta) GIT_OBJ_OFS_DELTA)
+  ((ref-delta otype/ref-delta) GIT_OBJ_REF_DELTA))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; blob.h
@@ -159,59 +169,33 @@
 (define index-clear (foreign-lambda void git_index_clear index))
 (define index-free  (foreign-lambda void git_index_free index))
 
-(define (index-read ix)
-  (guard-errors index-read
-    ((foreign-lambda int git_index_read index) ix)))
-
-(define (index-write ix)
-  (guard-errors index-write
-    ((foreign-lambda int git_index_write index) ix)))
+(define/retval index-read  (git_index_read (index ix)))
+(define/retval index-write (git_index_write (index ix)))
 
 (define index-find (foreign-lambda int index_find c-string))
 
-(define (index-add ix path stage)
-  (guard-errors index-add
-    ((foreign-lambda int git_index_add index c-string int) ix path stage)))
+(define/retval index-add    (git_index_add (index ix) (c-string path) (int stage)))
+(define/retval index-append (git_index_append (index ix) (c-string path) (int stage)))
+(define/retval index-remove (git_index_remove (index ix) (int pos)))
 
-(define (index-append ix path stage)
-  (guard-errors index-append
-    ((foreign-lambda int git_index_append index c-string int) ix path stage)))
-
-(define (index-remove ix pos)
-  (guard-errors index-remove
-    ((foreign-lambda int git_index_remove index int) ix pos)))
-
-(define (index-get ix pos)
-  (and-let* ((ptr ((foreign-lambda entry git_index_get index unsigned-int) ix pos))
-             (not (null-pointer? ptr)))
-    ptr))
-
-(define index-entrycount          (foreign-lambda unsigned-int git_index_entrycount index))
-(define index-entrycount-unmerged (foreign-lambda unsigned-int git_index_entrycount_unmerged index))
-
-(define (index-get-unmerged-bypath ix path)
-  (and-let* ((ptr ((foreign-lambda entry-unmerged git_index_get_unmerged_bypath index c-string) ix path))
-             (not (null-pointer? ptr)))
-    ptr))
-
-(define (index-get-unmerged-byindex ix n)
-  (and-let* ((ptr ((foreign-lambda entry-unmerged git_index_get_unmerged_byindex index unsigned-int) ix n))
-             (not (null-pointer? ptr)))
-    ptr))
-
-(define index-entry-stage (foreign-lambda int git_index_entry_stage entry))
+(define index-get                  (foreign-lambda entry git_index_get index unsigned-int))
+(define index-entrycount           (foreign-lambda unsigned-int git_index_entrycount index))
+(define index-entrycount-unmerged  (foreign-lambda unsigned-int git_index_entrycount_unmerged index))
+(define index-get-unmerged-bypath  (foreign-lambda entry-unmerged git_index_get_unmerged_bypath index c-string))
+(define index-get-unmerged-byindex (foreign-lambda entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
+(define index-entry-stage          (foreign-lambda int git_index_entry_stage entry))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; object.h
 
 (define/allocate object object-lookup 
-  (git_object_lookup (repository repo) (oid id) (otype type)))
+  (git_object_lookup (repository repo) (oid id) (obj type)))
 
 (define object-id          (foreign-lambda oid git_object_id object))
 (define object-close       (foreign-lambda void git_object_close object))
 (define object-owner       (foreign-lambda repository git_object_owner object))
 (define object-type        (foreign-lambda otype git_object_type object))
-(define object-type2string (foreign-lambda otype git_object_type2string otype))
+(define object-type2string (foreign-lambda otype git_object_type2string obj))
 (define object-string2type (foreign-lambda otype git_object_string2type c-string))
 (define object-typeisloose (foreign-lambda bool git_object_typeisloose otype))
 (define object-size        (foreign-lambda unsigned-int git_object__size otype))
@@ -242,14 +226,61 @@
 
 ;; TODO
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; refs.h
+
+(define-foreign-enum-type (rtype int)
+  (rtype->int int->rtype)
+  ((invalid  rtype/invalid)  GIT_REF_INVALID)
+  ((oid      rtype/oid)      GIT_REF_OID)
+  ((symbolic rtype/symbolic) GIT_REF_SYMBOLIC)
+  ((packed   rtype/packed)   GIT_REF_PACKED)
+  ((haspeel  rtype/haspeel)  GIT_REF_HAS_PEEL)
+  ((listall  rtype/listall)  GIT_REF_LISTALL))
+
+(define/allocate reference reference-lookup
+  (git_reference_lookup (repository repo) (c-string name)))
+
+(define/allocate reference reference-create-symbolic
+  (git_reference_create_symbolic (repository repo) (c-string name) (c-string target)))
+
+(define/allocate reference reference-create-symbolic-f
+  (git_reference_create_symbolic_f (repository repo) (c-string name) (c-string target)))
+
+(define/allocate reference reference-create-oid
+  (git_reference_create_oid (repository repo) (c-string name) (oid id)))
+
+(define/allocate reference reference-create-oid-f
+  (git_reference_create_oid_f (repository repo) (c-string name) (oid id)))
+
+(define reference-oid    (foreign-lambda oid git_reference_oid reference))
+(define reference-target (foreign-lambda c-string git_reference_target reference))
+(define reference-type   (foreign-lambda rtype git_reference_type reference))
+(define reference-name   (foreign-lambda c-string git_reference_name reference))
+
+(define/allocate reference reference-resolve
+  (git_reference_resolve (reference ref)))
+
+(define reference-owner  (foreign-lambda repository git_reference_owner reference))
+
+(define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
+(define/retval reference-set-oid    (git_reference_set_oid (reference ref) (oid id)))
+(define/retval reference-rename     (git_reference_rename (reference ref) (c-string name)))
+(define/retval reference-rename-f   (git_reference_rename_f (reference ref) (c-string name)))
+(define/retval reference-delete     (git_reference_delete (reference ref)))
+(define/retval reference-packall    (git_reference_packall (repository repo)))
+
+;; TODO
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
 
-(define-foreign-type repository-pathid int)
-(define path/path    (foreign-value GIT_REPO_PATH int))
-(define path/index   (foreign-value GIT_REPO_PATH_INDEX int))
-(define path/odb     (foreign-value GIT_REPO_PATH_ODB int))
-(define path/workdir (foreign-value GIT_REPO_PATH_WORKDIR int))
+(define-foreign-enum-type (path int)
+  (path->int int->path)
+  ((path path/path) GIT_REPO_PATH)
+  ((index path/index) GIT_REPO_PATH_INDEX)
+  ((odb path/odb) GIT_REPO_PATH_ODB)
+  ((workdir path/workdir) GIT_REPO_PATH_WORKDIR))
 
 (define/allocate repository repository-open
   (git_repository_open (c-string path)))
@@ -269,8 +300,8 @@
 (define repository-is-bare
   (foreign-lambda bool git_repository_is_bare repository))
 
-(define (repository-path repo #!optional (pathid path/path))
-  ((foreign-lambda c-string git_repository_path repository repository-pathid) repo pathid))
+(define repository-path
+  (foreign-lambda c-string git_repository_path repository path))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h
