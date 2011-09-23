@@ -53,6 +53,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; types.h
 
+(define-foreign-type time-t integer64)
+
+(define-foreign-record-type (time git_time)
+  (time-t time time-time)
+  (int offset time-offset))
+
+(define-foreign-record-type (signature git_signature)
+  (c-string name signature-name)
+  (c-string email signature-email)
+  ((struct time) when signature-time))
+
 (define-foreign-type commit         (c-pointer "git_commit"))
 (define-foreign-type config         (c-pointer "git_config"))
 (define-foreign-type blob*          (c-pointer "git_blob")) ; clash w/ built-in
@@ -65,8 +76,6 @@
 (define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
-(define-foreign-type signature      (c-pointer "git_signature"))
-(define-foreign-type time           (c-pointer "git_time_t"))
 (define-foreign-type tree           (c-pointer "git_tree"))
 
 (define-foreign-enum-type (otype int)
@@ -189,13 +198,13 @@
 ;; object.h
 
 (define/allocate object object-lookup 
-  (git_object_lookup (repository repo) (oid id) (obj type)))
+  (git_object_lookup (repository repo) (oid id) (otype type)))
 
 (define object-id          (foreign-lambda oid git_object_id object))
 (define object-close       (foreign-lambda void git_object_close object))
 (define object-owner       (foreign-lambda repository git_object_owner object))
 (define object-type        (foreign-lambda otype git_object_type object))
-(define object-type2string (foreign-lambda otype git_object_type2string obj))
+(define object-type2string (foreign-lambda otype git_object_type2string otype))
 (define object-string2type (foreign-lambda otype git_object_string2type c-string))
 (define object-typeisloose (foreign-lambda bool git_object_typeisloose otype))
 (define object-size        (foreign-lambda unsigned-int git_object__size otype))
@@ -318,4 +327,12 @@
     id))
 
 (define revwalk-free
-  (foreign-lambda void git_revwalk_free revwalk)))
+  (foreign-lambda void git_revwalk_free revwalk))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; signature.h
+
+(define signature-new  (foreign-lambda signature git_signature_new c-string c-string time-t int))
+(define signature-now  (foreign-lambda signature git_signature_now c-string c-string))
+(define signature-dup  (foreign-lambda signature git_signature_dup signature))
+(define signature-free (foreign-lambda void git_signature_free signature)))
