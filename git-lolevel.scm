@@ -64,6 +64,9 @@
   (c-string email signature-email)
   ((struct time) when signature-time))
 
+(define-foreign-record-type (oid git_oid)
+  (unsigned-char (id (foreign-value GIT_OID_RAWSZ int)) oid-id))
+
 (define-foreign-type commit         (c-pointer "git_commit"))
 (define-foreign-type config         (c-pointer "git_config"))
 (define-foreign-type blob*          (c-pointer "git_blob")) ; clash w/ built-in
@@ -72,7 +75,6 @@
 (define-foreign-type index          (c-pointer "git_index"))
 (define-foreign-type object         (c-pointer "git_object"))
 (define-foreign-type odb            (c-pointer "git_odb"))
-(define-foreign-type oid            (c-pointer "git_oid"))
 (define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
@@ -145,6 +147,21 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; common.h
+
+(define-foreign-record-type (strarray git_strarray)
+  (constructor: make-strarray)
+  ((c-pointer c-string) strings %strarray-strings)
+  (unsigned-int count strarray-count))
+
+(define strarray-free (foreign-lambda void git_strarray_free strarray))
+
+(define (strarray-strings sa)
+  ((foreign-lambda* c-string-list ((strarray sa))
+     "char **s = (char **)malloc(sizeof(char **) * (sa->count + 1));
+      memcpy(s, sa->strings, sizeof(char **) * sa->count);
+      *(s + sa->count) = NULL;
+      C_return(s);")
+     sa))
 
 (define (libgit2-version)
   (let-location ((major int) (minor int) (rev int))
@@ -279,7 +296,16 @@
 (define/retval reference-delete     (git_reference_delete (reference ref)))
 (define/retval reference-packall    (git_reference_packall (repository repo)))
 
-;; TODO
+(define (reference-listall repo flags)
+  (let ((sa (make-strarray)))
+    (guard-errors 'reference-listall
+      ((foreign-lambda int git_reference_listall strarray repository rtype) sa repo flags))
+    (let ((lst (strarray-strings sa)))
+      (strarray-free sa)
+      lst)))
+
+(define/retval reference-foreach
+  (git_reference_foreach (repository repo) (rtype flags) ((function int ((const c-string) c-pointer)) callback) (c-pointer payload)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
