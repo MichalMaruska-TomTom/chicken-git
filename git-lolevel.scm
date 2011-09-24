@@ -65,6 +65,7 @@
   ((struct time) when signature-time))
 
 (define-foreign-record-type (oid git_oid)
+  (constructor: make-oid)
   (unsigned-char (id (foreign-value GIT_OID_RAWSZ int)) oid-id))
 
 (define-foreign-type commit         (c-pointer "git_commit"))
@@ -75,6 +76,7 @@
 (define-foreign-type index          (c-pointer "git_index"))
 (define-foreign-type object         (c-pointer "git_object"))
 (define-foreign-type odb            (c-pointer "git_odb"))
+(define-foreign-type oid-shorten    (c-pointer "git_oid_shorten"))
 (define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
@@ -138,7 +140,7 @@
 (define commit-parent-oid    (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
 
 (define (commit-create id repo ref aut cmt msg tree pc par)
-  (let ((id (allocate (foreign-value "sizeof(git_oid)" int))))
+  (let ((id (make-oid)))
     (guard-errors commit-create
       ((foreign-lambda int git_commit_create
          oid repository c-string signature signature c-string oid  int (const (c-pointer oid)))
@@ -153,10 +155,14 @@
   ((c-pointer c-string) strings %strarray-strings)
   (unsigned-int count strarray-count))
 
+;; Not really needed, just here for completion's sake.
+;; In fact using it will probably just result in a double-free.
 (define strarray-free (foreign-lambda void git_strarray_free strarray))
 
+;; Gets a GC'd list of strings from the strarray
+;; (for return from e.g. git_reference_listall).
 (define (strarray-strings sa)
-  ((foreign-lambda* c-string-list ((strarray sa))
+  ((foreign-lambda* c-string-list* ((strarray sa))
      "char **s = (char **)malloc(sizeof(char **) * (sa->count + 1));
       memcpy(s, sa->strings, sizeof(char **) * sa->count);
       *(s + sa->count) = NULL;
@@ -169,7 +175,7 @@
        (location major)
        (location minor)
        (location rev))
-    (values major minor rev)))
+    (vector major minor rev)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; config.h
@@ -240,17 +246,46 @@
 ;; oid.h
 
 (define (oid-fromstr str)
-  (let ((id (allocate (foreign-value "sizeof(git_oid)" int))))
+  (let ((id (make-oid)))
     (guard-errors oid-fromstr
       ((foreign-lambda int git_oid_fromstr oid c-string) id str))
     id))
 
 (define (oid-fromraw raw)
-  (let ((id (allocate (foreign-value "sizeof(git_oid)" int))))
+  (let ((id (make-oid)))
     ((foreign-lambda void git_oid_fromraw oid blob) id raw)
     id))
 
-;; TODO
+(define (oid-fmt oid)
+  (let* ((str (make-string 40))
+         (loc (make-locative str)))
+    ((foreign-lambda void git_oid_fmt (c-pointer char) oid) loc oid)
+    str))
+
+(define (oid-pathfmt oid)
+  (let* ((str (make-string 40))
+         (loc (make-locative str)))
+    ((foreign-lambda void git_oid_pathfmt (c-pointer char) oid) loc oid)
+    str))
+
+(define oid-allocfmt     (foreign-lambda c-string* git_oid_allocfmt oid))
+
+(define (oid-to-string n oid)
+  (let* ((str (make-string n))
+         (loc (make-locative str)))
+    ((foreign-lambda c-string git_oid_to_string
+       (c-pointer char) unsigned-int oid)
+       loc (+ n 1) oid)))
+
+(define oid-cpy          (foreign-lambda void git_oid_cpy oid oid))
+(define oid-cmp          (foreign-lambda int git_oid_cmp oid oid))
+(define oid-ncmp         (foreign-lambda int git_oid_ncmp oid oid unsigned-int))
+(define oid-shorten-new  (foreign-lambda oid-shorten git_oid_shorten_new unsigned-int))
+
+(define/retval oid-shorten-add
+  (git_oid_shorten_add (oid-shorten osh) ((const c-string) oid)))
+
+(define oid-shorten-free (foreign-lambda void git_oid_shorten_free oid-shorten))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; refs.h
@@ -300,12 +335,10 @@
   (let ((sa (make-strarray)))
     (guard-errors 'reference-listall
       ((foreign-lambda int git_reference_listall strarray repository rtype) sa repo flags))
-    (let ((lst (strarray-strings sa)))
-      (strarray-free sa)
-      lst)))
+    (strarray-strings sa)))
 
-(define/retval reference-foreach
-  (git_reference_foreach (repository repo) (rtype flags) ((function int ((const c-string) c-pointer)) callback) (c-pointer payload)))
+;; Maybe TODO foreach.
+;; Probably not.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
@@ -348,7 +381,7 @@
   (foreign-lambda int git_revwalk_push revwalk oid))
 
 (define (revwalk-next walker)
-  (let ((id (allocate (foreign-value "sizeof(git_oid)" int))))
+  (let ((id (make-oid)))
     ((foreign-lambda int git_revwalk_next oid revwalk) id walker)
     id))
 

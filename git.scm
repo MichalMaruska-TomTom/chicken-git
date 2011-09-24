@@ -14,11 +14,11 @@
     (prefix git-lolevel git-))
   (require-library git-lolevel)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Repository
+
 (define-record repository
   pointer path index odb workdir)
-
-(define-record reference
-  pointer name oid target type)
 
 (define (repository-open path)
   ;; Try opening path as a "normal" repo first
@@ -41,14 +41,20 @@
 (define-record-printer (repository r out)
   (display (format "#<repository ~S>" (repository-path r)) out))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Reference
+
+(define-record reference
+  pointer oid name target type)
+
 (define (repository-ref repo ref)
   (and-let* ((ref (git-reference-resolve
                     (git-reference-lookup
                       (repository-pointer repo)
                       ref))))
     (make-reference ref
-      (git-reference-name ref)
       (git-reference-oid ref)
+      (git-reference-name ref)
       (git-reference-target ref)
       (git-reference-type ref))))
 
