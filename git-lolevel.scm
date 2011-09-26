@@ -76,11 +76,13 @@
 (define-foreign-type index          (c-pointer "git_index"))
 (define-foreign-type object         (c-pointer "git_object"))
 (define-foreign-type odb            (c-pointer "git_odb"))
+(define-foreign-type odb-object     (c-pointer "git_odb_object"))
 (define-foreign-type oid-shorten    (c-pointer "git_oid_shorten"))
 (define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
 (define-foreign-type tree           (c-pointer "git_tree"))
+(define-foreign-type tree-entry     (c-pointer "git_tree_entry"))
 
 (define-foreign-enum-type (otype int)
   (otype->int int->otype)
@@ -123,21 +125,19 @@
 (define commit-id            (foreign-lambda oid git_commit_id commit))
 (define commit-message-short (foreign-lambda c-string git_commit_message_short commit))
 (define commit-message       (foreign-lambda c-string git_commit_message commit))
-(define commit-time          (foreign-lambda time git_commit_time commit))
+(define commit-time          (foreign-lambda time-t git_commit_time commit))
 (define commit-time-offset   (foreign-lambda int git_commit_time_offset commit))
 (define commit-committer     (foreign-lambda signature git_commit_committer commit))
 (define commit-author        (foreign-lambda signature git_commit_author commit))
+(define commit-tree-oid      (foreign-lambda oid git_commit_tree_oid commit))
+(define commit-parentcount   (foreign-lambda unsigned-int git_commit_parentcount commit))
+(define commit-parent-oid    (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
 
 (define/allocate tree commit-tree
   (git_commit_tree (commit cmt)))
 
-(define commit-tree-oid      (foreign-lambda oid git_commit_tree_oid commit))
-(define commit-parentcount   (foreign-lambda unsigned-int git_commit_parentcount commit))
-
 (define/allocate commit commit-parent
   (git_commit_parent (commit cmt) (unsigned-int n)))
-
-(define commit-parent-oid    (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
 
 (define (commit-create id repo ref aut cmt msg tree pc par)
   (let ((id (make-oid)))
@@ -193,19 +193,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; index.h
 
-;; TODO Lots of these follow the same pattern, should be unified.
-
-(define/allocate index index-open
-  (git_index_open (c-string path)))
+(define/allocate index index-open (git_index_open (c-string path)))
 
 (define index-clear (foreign-lambda void git_index_clear index))
 (define index-free  (foreign-lambda void git_index_free index))
+(define index-find  (foreign-lambda int index_find c-string))
 
-(define/retval index-read  (git_index_read (index ix)))
-(define/retval index-write (git_index_write (index ix)))
-
-(define index-find (foreign-lambda int index_find c-string))
-
+(define/retval index-read   (git_index_read (index ix)))
+(define/retval index-write  (git_index_write (index ix)))
 (define/retval index-add    (git_index_add (index ix) (c-string path) (int stage)))
 (define/retval index-append (git_index_append (index ix) (c-string path) (int stage)))
 (define/retval index-remove (git_index_remove (index ix) (int pos)))
@@ -240,7 +235,42 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; odb.h
 ;;
-;; TODO
+;; TODO git_odb_add_backend git_odb_add_alternate git_odb_read_header
+;;      git_odb_open_wstream git_odb_open_rstream
+
+(define/allocate odb odb-new  (git_odb_new))
+(define/allocate odb odb-open (git_odb_open (c-string dir)))
+
+(define git-odb-close (foreign-lambda void git_odb_close odb))
+(define odb-exists (foreign-lambda bool git_odb_exists odb oid))
+
+(define/allocate odb-object git-odb-read
+  (git_odb_read (odb db) (oid id)))
+
+(define/allocate odb-object git-odb-read-prefix
+  (git_odb_read_prefix (odb db) (oid id) (unsigned-int len)))
+
+(define (odb-write db data len type)
+  (let ((id (make-oid)))
+    (guard-errors odb-write
+      ((foreign-lambda int git_odb_write
+         oid odb c-pointer unsigned-int otype)
+         id  db  data      len          type))
+    id))
+
+(define (odb-hash data len type)
+  (let ((id (make-oid)))
+    (guard-errors odb-hash
+      ((foreign-lambda int git_odb_hash
+         oid c-pointer unsigned-int otype)
+         id  data      len          type))
+    id))
+
+(define odb-object-close (foreign-lambda void git_odb_object_close odb-object))
+(define odb-object-id    (foreign-lambda oid git_odb_object_id odb-object))
+(define odb-object-data  (foreign-lambda c-pointer git_odb_object_data odb-object))
+(define odb-object-size  (foreign-lambda unsigned-int git_odb_object_size odb-object))
+(define odb-object-type  (foreign-lambda otype git_odb_object_type odb-object))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; oid.h
@@ -268,7 +298,7 @@
     ((foreign-lambda void git_oid_pathfmt (c-pointer char) oid) loc oid)
     str))
 
-(define oid-allocfmt     (foreign-lambda c-string* git_oid_allocfmt oid))
+(define oid-allocfmt     (foreign-lambda c-string git_oid_allocfmt oid))
 
 (define (oid-to-string n oid)
   (let* ((str (make-string n))
@@ -333,7 +363,7 @@
 
 (define (reference-listall repo flags)
   (let ((sa (make-strarray)))
-    (guard-errors 'reference-listall
+    (guard-errors reference-listall
       ((foreign-lambda int git_reference_listall strarray repository rtype) sa repo flags))
     (strarray-strings sa)))
 
@@ -353,23 +383,14 @@
 (define/allocate repository repository-open
   (git_repository_open (c-string path)))
 
-(define repository-database
-  (foreign-lambda odb git_repository_database repository))
-
 (define/allocate index repository-index
   (git_repository_index (repository repo)))
 
-(define repository-free
-  (foreign-lambda void git_repository_free repository))
-
-(define repository-is-empty
-  (foreign-lambda bool git_repository_is_empty repository))
-
-(define repository-is-bare
-  (foreign-lambda bool git_repository_is_bare repository))
-
-(define repository-path
-  (foreign-lambda c-string git_repository_path repository path))
+(define repository-database (foreign-lambda odb git_repository_database repository))
+(define repository-free     (foreign-lambda void git_repository_free repository))
+(define repository-is-empty (foreign-lambda bool git_repository_is_empty repository))
+(define repository-is-bare  (foreign-lambda bool git_repository_is_bare repository))
+(define repository-path     (foreign-lambda c-string git_repository_path repository path))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h
@@ -377,16 +398,13 @@
 (define/allocate revwalk revwalk-new
   (git_revwalk_new (repository repo)))
 
-(define revwalk-push
-  (foreign-lambda int git_revwalk_push revwalk oid))
+(define revwalk-push (foreign-lambda int git_revwalk_push revwalk oid))
+(define revwalk-free (foreign-lambda void git_revwalk_free revwalk))
 
 (define (revwalk-next walker)
   (let ((id (make-oid)))
     ((foreign-lambda int git_revwalk_next oid revwalk) id walker)
     id))
-
-(define revwalk-free
-  (foreign-lambda void git_revwalk_free revwalk))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; signature.h
@@ -394,4 +412,34 @@
 (define signature-new  (foreign-lambda signature git_signature_new c-string c-string time-t int))
 (define signature-now  (foreign-lambda signature git_signature_now c-string c-string))
 (define signature-dup  (foreign-lambda signature git_signature_dup signature))
-(define signature-free (foreign-lambda void git_signature_free signature)))
+(define signature-free (foreign-lambda void git_signature_free signature))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tree.h
+
+(define/allocate tree tree-lookup
+  (git_tree_lookup (repository repo) (oid id)))
+
+(define/allocate tree tree-lookup-prefix
+  (git_tree_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
+
+(define tree-close            (foreign-lambda void git_tree_close tree))
+(define tree-id               (foreign-lambda oid git_tree_id tree))
+(define tree-entrycount       (foreign-lambda unsigned-int git_tree_entrycount tree))
+(define tree-entry-byname     (foreign-lambda tree-entry git_tree_entry_byname tree c-string))
+(define tree-entry-byindex    (foreign-lambda tree-entry git_tree_entry_byindex tree unsigned-int))
+(define tree-entry-attributes (foreign-lambda unsigned-int git_tree_entry_attributes tree-entry))
+(define tree-entry-name       (foreign-lambda c-string git_tree_entry_name tree-entry))
+(define tree-entry-id         (foreign-lambda oid git_tree_entry_id tree-entry))
+(define tree-entry-type       (foreign-lambda otype git_tree_entry_type tree-entry))
+
+(define/allocate object tree-entry-2object
+  (git_tree_entry_2object (repository repo) (tree-entry entry)))
+
+(define (tree-entry-create-fromindex ix)
+  (let ((id (make-oid)))
+    (guard-errors tree-entry-create-fromindex
+      ((foreign-lambda int git_tree_create_fromindex oid index) id ix))
+    id)))
+
+;; TODO treebuilders
