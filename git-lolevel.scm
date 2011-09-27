@@ -160,12 +160,13 @@
 (define/allocate tree commit-tree (git_commit_tree (commit cmt)))
 (define/allocate commit commit-parent (git_commit_parent (commit cmt) (unsigned-int n)))
 
-(define (commit-create id repo ref aut cmt msg tree pc par)
+(define (commit-create repo ref aut cmt msg tree . par)
   (let ((id (make-oid)))
     (guard-errors commit-create
-      ((foreign-lambda int git_commit_create
-         oid repository c-string signature signature c-string oid  int (const (c-pointer oid)))
-         id  repo       ref      aut       cmt       msg      tree pc  par))
+      ((foreign-lambda int git_commit_create_o
+         oid repository c-string signature signature c-string tree int          pointer-vector)
+         id  repo       ref      aut       cmt       msg      tree (length par) (apply pointer-vector
+                                                                                   (append par #f))))
     id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -218,7 +219,7 @@
 
 (define index-clear (foreign-lambda void git_index_clear index))
 (define index-free  (foreign-lambda void git_index_free index))
-(define index-find  (foreign-lambda int index_find c-string))
+(define index-find  (foreign-lambda int git_index_find index c-string))
 
 (define/retval index-read   (git_index_read (index ix)))
 (define/retval index-write  (git_index_write (index ix)))
@@ -456,9 +457,9 @@
 (define/allocate object tree-entry-2object
   (git_tree_entry_2object (repository repo) (tree-entry entry)))
 
-(define (tree-entry-create-fromindex ix)
+(define (tree-create-fromindex ix)
   (let ((id (make-oid)))
-    (guard-errors tree-entry-create-fromindex
+    (guard-errors tree-create-fromindex
       ((foreign-lambda int git_tree_create_fromindex oid index) id ix))
     id)))
 

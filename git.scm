@@ -13,13 +13,13 @@
    repository-empty? repository-bare?
    reference references reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
-   commit commit-id commit-message commit-message-short
+   commit create-commit commit-id commit-message commit-message-short
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
    blob blob-content blob-size
-   index-open index-clear index-add index-read index-write
-   index-entrycount index-entrycount-unmerged index-contains?
-   index-ref index->list
+   index-open index-find index-ref index->list
+   index-clear index-add index-read! index-write! index-remove
+   index-entrycount index-entrycount-unmerged
    index-entry-dev index-entry-oid index-entry-ino index-entry-mode
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
    index-entry-flags index-entry-extended index-entry-path
@@ -28,7 +28,7 @@
    odb-object-id odb-object-data odb-object-size odb-object-type
    make-signature signature-name signature-email
    signature-time signature-time-offset
-   tree tree-id tree-entrycount tree-ref tree->list
+   tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
    tree-entry->object)
   (import scheme
@@ -185,6 +185,19 @@
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
 
+(define (create-commit repo #!key tree parents message author (committer author) (reference #f))
+  (pointer->commit
+    (apply git-commit-create
+      (repository->pointer repo)
+      (cond ((string? reference) reference)
+            ((reference? reference) (reference-name reference))
+            (else #f))
+      (signature->pointer author)
+      (signature->pointer committer)
+      message
+      (tree->pointer tree)
+      (map commit->pointer parents))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Blobs
 
@@ -208,7 +221,7 @@
 ;; Index
 
 (define-git-record-type
-  (index entrycount entrycount-unmerged read write clear)
+  (index entrycount entrycount-unmerged)
   (format "#<index>")
   (git-index-free))
 
@@ -217,14 +230,38 @@
   (format "#<index-entry ~S>" (index-entry-path index-entry))
   (git-odb-object-close))
 
-(define (index-open path) (pointer->index (git-index-open path)))
-(define (index-contains? ix path) (git-index-find (index->pointer ix) path))
+(define (index-open loc)
+  (pointer->index
+    (cond ((string? loc) (git-index-open loc))
+          ((repository? loc) (git-repository-index (repository->pointer loc)))
+          (else (git-git-error 'index-open
+                               "Invalid index location"
+                               loc)))))
 
+;; Wrap procedures so they return the index.
+;; We'll add bangs to read & write since they actually
+;; interact with the file system, though all of these
+;; procedures mutate the given index object.
+(define (index-read! ix)  (git-index-read (index->pointer ix)) ix)
+(define (index-write! ix) (git-index-write (index->pointer ix)) ix)
+(define (index-clear ix)  (git-index-clear (index->pointer ix)) ix)
 (define (index-add ix path #!optional (stage 0))
-  (git-index-add (index->pointer ix) stage))
+  (git-index-add (index->pointer ix) path stage)
+  ix)
 
-(define (index-append ix path #!optional (stage 0))
-  (git-index-append (index->pointer ix) stage))
+(define (index-remove ix ref)
+  (let ((ix* (index->pointer ix)))
+    (cond ((string? ref)
+           (and-let* ((pos (index-find ix ref)))
+             (git-index-remove ix* pos)))
+          ((number? ref)
+           (git-index-remove ix* ref))
+          (else #f))))
+
+(define (index-find ix path)
+  (and-let* ((pos (git-index-find (index->pointer ix) path))
+             ((<= 0 pos)))
+    pos))
 
 (define (index-ref ix key #!optional (type 'merged))
   (case type
@@ -242,7 +279,12 @@
 
 (define (index->list ix #!optional (type 'merged))
   (map (lambda (i) (index-ref ix i type))
-       (iota (index-entrycount ix))))
+       (iota (case type
+               ((merged) (index-entrycount ix))
+               ((unmerged) (index-entrycount-unmerged ix))
+               (else (git-git-error 'index-ref
+                         "Invalid index type specifier"
+                         type))))))
 
 (define (index-entry-id entry) (pointer->oid (index-entry-oid entry)))
 
@@ -266,10 +308,18 @@
   (git-odb-object-close))
 
 (define (odb-new) (pointer->odb (git-odb-new)))
-(define (odb-open path) (pointer->odb (git-odb-open path)))
+
 (define (odb-has-object? odb obj)
   (git-odb-exists (odb->pointer odb)
                   (oid->pointer (->oid obj))))
+
+(define (odb-open loc)
+  (pointer->odb
+    (cond ((string? loc) (git-odb-open loc))
+          ((repository? loc) (git-odb-open (repository-path loc 'odb)))
+          (else (git-git-error 'odb-open
+                               "Invalid odb location"
+                               loc)))))
 
 ;; Not sure how to wrap this one
 ;; so it returns something meaningful.
@@ -335,6 +385,9 @@
       ((commit) (pointer->commit obj))
       ; ((tag) (pointer->tag obj)) TODO
       ((tree)   (pointer->tree obj)))))
+
+(define (create-tree repo ix)
+  (tree repo (pointer->oid (git-tree-create-fromindex (index->pointer ix)))))
 
 (define (tree->list tree)
   (map (lambda (i) (tree-ref tree i))
