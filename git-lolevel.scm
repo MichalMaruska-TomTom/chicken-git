@@ -4,7 +4,8 @@
 ;; Copyright (c) 2011, Evan Hanson
 ;; See LICENSE for details
 ;;
-;; Nowhere near complete. Don't use this.
+;; Getting to be sort of complete.
+;; Still, think twice before use.
 
 (module git-lolevel *
   (import scheme lolevel foreign foreigners
@@ -54,6 +55,7 @@
 ;; types.h
 
 (define-foreign-type time-t integer64)
+(define-foreign-type off-t integer64)
 
 (define-foreign-record-type (time git_time)
   (time-t time time-time)
@@ -68,10 +70,32 @@
   (constructor: make-oid)
   (unsigned-char (id (foreign-value GIT_OID_RAWSZ int)) oid-id))
 
+(define-foreign-record-type (index-time git_index_time)
+  (time-t seconds index-time-seconds)
+  (unsigned-int nanoseconds index-time-nanoseconds))
+
+(define-foreign-record-type (index-entry git_index_entry)
+  ((struct index-time) ctime index-entry-ctime)
+  ((struct index-time) mtime index-entry-mtime)
+  (unsigned-int dev index-entry-dev)
+  (unsigned-int ino index-entry-ino)
+  (unsigned-int mode index-entry-mode)
+  (unsigned-int uid index-entry-uid)
+  (unsigned-int gid index-entry-gid)
+  (off-t file_size index-entry-size)
+  ((struct oid) oid index-entry-oid)
+  (unsigned-int flags index-entry-flags)
+  (unsigned-int flags_extended index-entry-extended)
+  (c-string path index-entry-path))
+
+(define-foreign-record-type (index-entry-unmerged git_index_entry_unmerged)
+  (unsigned-int (mode 3) index-entry-unmerged-mode)
+  ((struct oid) (oid 3) index-entry-unmerged-oid)
+  (c-string path index-entry-unmerged-path))
+
 (define-foreign-type commit         (c-pointer "git_commit"))
 (define-foreign-type config         (c-pointer "git_config"))
 (define-foreign-type blob*          (c-pointer "git_blob")) ; clash w/ built-in
-(define-foreign-type entry          (c-pointer "git_index_entry"))
 (define-foreign-type entry-unmerged (c-pointer "git_index_entry_unmerged"))
 (define-foreign-type index          (c-pointer "git_index"))
 (define-foreign-type object         (c-pointer "git_object"))
@@ -107,7 +131,7 @@
   (git_blob_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
 (define blob-close             (foreign-lambda void git_blob_close blob*))
-(define blob-rawcontent        (foreign-lambda c-pointer git_blob_rawcontent blob*))
+(define blob-rawcontent        (foreign-lambda c-string git_blob_rawcontent blob*))
 (define blob-rawsize           (foreign-lambda int git_blob_rawsize blob*))
 (define blob-create-fromfile   (foreign-lambda int git_blob_create_fromfile oid repository c-string))
 (define blob-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
@@ -133,11 +157,8 @@
 (define commit-parentcount   (foreign-lambda unsigned-int git_commit_parentcount commit))
 (define commit-parent-oid    (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
 
-(define/allocate tree commit-tree
-  (git_commit_tree (commit cmt)))
-
-(define/allocate commit commit-parent
-  (git_commit_parent (commit cmt) (unsigned-int n)))
+(define/allocate tree commit-tree (git_commit_tree (commit cmt)))
+(define/allocate commit commit-parent (git_commit_parent (commit cmt) (unsigned-int n)))
 
 (define (commit-create id repo ref aut cmt msg tree pc par)
   (let ((id (make-oid)))
@@ -205,12 +226,12 @@
 (define/retval index-append (git_index_append (index ix) (c-string path) (int stage)))
 (define/retval index-remove (git_index_remove (index ix) (int pos)))
 
-(define index-get                  (foreign-lambda entry git_index_get index unsigned-int))
+(define index-get                  (foreign-lambda index-entry git_index_get index unsigned-int))
 (define index-entrycount           (foreign-lambda unsigned-int git_index_entrycount index))
 (define index-entrycount-unmerged  (foreign-lambda unsigned-int git_index_entrycount_unmerged index))
-(define index-get-unmerged-bypath  (foreign-lambda entry-unmerged git_index_get_unmerged_bypath index c-string))
-(define index-get-unmerged-byindex (foreign-lambda entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
-(define index-entry-stage          (foreign-lambda int git_index_entry_stage entry))
+(define index-get-unmerged-bypath  (foreign-lambda index-entry-unmerged git_index_get_unmerged_bypath index c-string))
+(define index-get-unmerged-byindex (foreign-lambda index-entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
+(define index-entry-stage          (foreign-lambda int git_index_entry_stage index-entry))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; object.h
@@ -225,7 +246,9 @@
 (define object-type2string (foreign-lambda otype git_object_type2string otype))
 (define object-string2type (foreign-lambda otype git_object_string2type c-string))
 (define object-typeisloose (foreign-lambda bool git_object_typeisloose otype))
-(define object-size        (foreign-lambda unsigned-int git_object__size otype))
+
+;; Conflicts with built-in, and we don't really need it.
+; (define object-size        (foreign-lambda unsigned-int git_object__size otype))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; odb_backend.h
@@ -241,13 +264,13 @@
 (define/allocate odb odb-new  (git_odb_new))
 (define/allocate odb odb-open (git_odb_open (c-string dir)))
 
-(define git-odb-close (foreign-lambda void git_odb_close odb))
+(define odb-close (foreign-lambda void git_odb_close odb))
 (define odb-exists (foreign-lambda bool git_odb_exists odb oid))
 
-(define/allocate odb-object git-odb-read
+(define/allocate odb-object odb-read
   (git_odb_read (odb db) (oid id)))
 
-(define/allocate odb-object git-odb-read-prefix
+(define/allocate odb-object odb-read-prefix
   (git_odb_read_prefix (odb db) (oid id) (unsigned-int len)))
 
 (define (odb-write db data len type)
@@ -311,11 +334,10 @@
 (define oid-cmp          (foreign-lambda int git_oid_cmp oid oid))
 (define oid-ncmp         (foreign-lambda int git_oid_ncmp oid oid unsigned-int))
 (define oid-shorten-new  (foreign-lambda oid-shorten git_oid_shorten_new unsigned-int))
+(define oid-shorten-free (foreign-lambda void git_oid_shorten_free oid-shorten))
 
 (define/retval oid-shorten-add
   (git_oid_shorten_add (oid-shorten osh) ((const c-string) oid)))
-
-(define oid-shorten-free (foreign-lambda void git_oid_shorten_free oid-shorten))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; refs.h
@@ -348,11 +370,9 @@
 (define reference-target (foreign-lambda c-string git_reference_target reference))
 (define reference-type   (foreign-lambda rtype git_reference_type reference))
 (define reference-name   (foreign-lambda c-string git_reference_name reference))
-
-(define/allocate reference reference-resolve
-  (git_reference_resolve (reference ref)))
-
 (define reference-owner  (foreign-lambda repository git_reference_owner reference))
+
+(define/allocate reference reference-resolve (git_reference_resolve (reference ref)))
 
 (define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
 (define/retval reference-set-oid    (git_reference_set_oid (reference ref) (oid id)))
