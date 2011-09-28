@@ -4,13 +4,14 @@
 ;; Copyright (c) 2011, Evan Hanson
 ;; See LICENSE for details
 ;;
-;; Just a stub. Might be home to a nice API someday.
+;; Approaching usability.
 
 (module git
   (object-id object-type object-sha
    string->oid oid->string oid->path
    repository-open repository-path
    repository-empty? repository-bare?
+   repository-ref
    reference references reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
    commit create-commit commit-id commit-message commit-message-short
@@ -18,7 +19,7 @@
    commit-author commit-committer commit-parent commit-tree
    blob blob-content blob-size
    index-open index-find index-ref index->list
-   index-clear index-add index-read! index-write! index-remove
+   index-clear index-add index-remove index-read index-write
    index-entrycount index-entrycount-unmerged
    index-entry-dev index-entry-oid index-entry-ino index-entry-mode
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
@@ -28,6 +29,7 @@
    odb-object-id odb-object-data odb-object-size odb-object-type
    make-signature signature-name signature-email
    signature-time signature-time-offset
+   tag tags tag-id tag-type tag-name tag-message tag-delete
    tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
    tree-entry->object)
@@ -78,7 +80,7 @@
 
 ;; All git record types consist of a
 ;; single field, the object pointer.
-(define (->pointer obj)
+(define (object->pointer obj)
   (vector-ref (record->vector obj) 1))
 
 (define-git-record-type
@@ -89,11 +91,11 @@
 ;; as reported by Git, or #f. Only for
 ;; Commit, Tree, Blob & Tag types.
 (define (object-type obj)
-  (let ((type (git-object-type (->pointer obj))))
+  (let ((type (git-object-type (object->pointer obj))))
     (and (symbol? type) type)))
 
 (define (object-id obj)
-  (pointer->oid (git-object-id (->pointer obj))))
+  (pointer->oid (git-object-id (object->pointer obj))))
 
 (define (object-sha obj #!optional (len 40))
   (oid->string (object-id obj) len))
@@ -112,6 +114,14 @@
         ((string? obj) (string->oid obj))
         ((reference? obj) (reference-id obj))
         (else (object-id obj))))
+
+(define (pointer->object ptr)
+  (case (git-object-type ptr)
+    ((blob)   (pointer->blob ptr))
+    ((commit) (pointer->commit ptr))
+    ((tag)    (pointer->tag ptr))
+    ((tree)   (pointer->tree ptr))
+    (else #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Repositories
@@ -139,6 +149,13 @@
 (define (repository-path repo #!optional (type 'path))
   (git-repository-path (repository->pointer repo) type))
 
+(define (repository-ref repo ref #!optional (type 'any))
+  (pointer->object
+    (git-object-lookup
+      (repository->pointer repo)
+      (oid->pointer (->oid ref))
+      type)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; References
 
@@ -164,6 +181,8 @@
 (define (references repo #!optional (type 'listall))
   (map (lambda (ref) (reference repo ref))
        (git-reference-listall (repository->pointer repo) type)))
+
+;; TODO rename, delete, set, pack
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commits
@@ -239,11 +258,9 @@
                                loc)))))
 
 ;; Wrap procedures so they return the index.
-;; We'll add bangs to read & write since they actually
-;; interact with the file system, though all of these
-;; procedures mutate the given index object.
-(define (index-read! ix)  (git-index-read (index->pointer ix)) ix)
-(define (index-write! ix) (git-index-write (index->pointer ix)) ix)
+;; All of these procedures mutate their argument. 
+(define (index-read  ix)  (git-index-read (index->pointer ix)) ix)
+(define (index-write ix)  (git-index-write (index->pointer ix)) ix)
 (define (index-clear ix)  (git-index-clear (index->pointer ix)) ix)
 (define (index-add ix path #!optional (stage 0))
   (git-index-add (index->pointer ix) path stage)
@@ -348,8 +365,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tags
-;;
-;; TODO
+
+(define-git-record-type
+  (tag id type name message)
+  (format "#<tag ~S>" (tag-name tag))
+  (git-tag-close))
+
+(define (tag repo name)
+  (pointer->tag
+    (git-tag-lookup
+      (repository->pointer repo)
+      (oid->pointer
+        (reference-id
+          (reference repo name))))))
+
+(define (tags repo)
+  (map (lambda (t) (tag repo t))
+       (git-tag-list (repository->pointer repo))))
+
+(define (tag-tagger tag) (pointer->signature (git-tag-tagger tag)))
+(define (tag-target tag) (pointer->object (git-tag-target tag)))
+
+(define (tag-delete repo tag)
+  (git-tag-delete
+    (repository->pointer repo)
+    (tag-name tag)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Trees
@@ -377,14 +417,10 @@
             (else (git-git-error 'tree-ref "Invalid key" key))))))
 
 (define (tree-entry->object repo entry)
-  (let* ((obj (git-tree-entry-2object
-                (repository->pointer repo)
-                (tree-entry->pointer entry))))
-    (case (git-object-type obj)
-      ((blob)   (pointer->blob obj))
-      ((commit) (pointer->commit obj))
-      ; ((tag) (pointer->tag obj)) TODO
-      ((tree)   (pointer->tree obj)))))
+  (pointer->object
+    (git-tree-entry-2object
+      (repository->pointer entry)
+      (tree-entry->pointer entry))))
 
 (define (create-tree repo ix)
   (tree repo (pointer->oid (git-tree-create-fromindex (index->pointer ix)))))

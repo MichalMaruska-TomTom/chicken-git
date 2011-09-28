@@ -19,7 +19,8 @@
             (make-property-condition 'exn 'location  loc
                                           'message   msg))))
 
-;; Check retval, signal an error when nonzero.
+;; Check the return value of an expression,
+;; signaling an error when nonzero.
 (define-syntax guard-errors
   (syntax-rules ()
     ((_ <loc> <exp>)
@@ -43,8 +44,9 @@
   (syntax-rules ()
     ((_  <name> (<cfun> (<atype> <arg>) ...))
      (define (<name> <arg> ...)
-       (guard-errors '<name>
-         ((foreign-lambda int <cfun> <atype> ...) <arg> ...))))))
+       (if (not (guard-errors '<name>
+                  ((foreign-lambda int <cfun> <atype> ...) <arg> ...)))
+         #f)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git2.h
@@ -105,6 +107,7 @@
 (define-foreign-type reference      (c-pointer "git_reference"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
+(define-foreign-type tag            (c-pointer "git_tag"))
 (define-foreign-type tree           (c-pointer "git_tree"))
 (define-foreign-type tree-entry     (c-pointer "git_tree_entry"))
 
@@ -160,13 +163,13 @@
 (define/allocate tree commit-tree (git_commit_tree (commit cmt)))
 (define/allocate commit commit-parent (git_commit_parent (commit cmt) (unsigned-int n)))
 
-(define (commit-create repo ref aut cmt msg tree . par)
+(define (commit-create repo ref author commit msg tree . parents)
   (let ((id (make-oid)))
     (guard-errors commit-create
       ((foreign-lambda int git_commit_create_o
-         oid repository c-string signature signature c-string tree int          pointer-vector)
-         id  repo       ref      aut       cmt       msg      tree (length par) (apply pointer-vector
-                                                                                   (append par #f))))
+         oid repository c-string signature signature c-string tree int              pointer-vector)
+         id  repo       ref      author    commit    msg      tree (length parents) (apply pointer-vector
+                                                                                      (append parents #f))))
     id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -434,6 +437,40 @@
 (define signature-now  (foreign-lambda signature git_signature_now c-string c-string))
 (define signature-dup  (foreign-lambda signature git_signature_dup signature))
 (define signature-free (foreign-lambda void git_signature_free signature))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tag.h
+
+(define/allocate tag tag-lookup
+  (git_tag_lookup (repository repo) (oid id)))
+
+(define/allocate object tag-target
+  (git_tag_target (tag t)))
+
+(define tag-close      (foreign-lambda void git_tag_close tag))
+(define tag-id         (foreign-lambda oid git_tag_id tag))
+(define tag-target-oid (foreign-lambda oid git_tag_target_oid tag))
+(define tag-type       (foreign-lambda otype git_tag_type tag))
+(define tag-name       (foreign-lambda c-string git_tag_name tag))
+(define tag-tagger     (foreign-lambda signature git_tag_tagger tag))
+(define tag-message    (foreign-lambda c-string git_tag_message tag))
+
+(define (tag-create repo name target tagger msg)
+  (let ((id (make-oid)))
+    (guard-errors tag-create
+      ((foreign-lambda int git_tag_create_o
+         oid repository c-string object signature c-string)
+         id  repo       name     target tagger    msg))
+    id))
+
+(define/retval tag-delete
+  (git_tag_delete (repository repo) (c-string name)))
+
+(define (tag-list repo)
+  (let ((sa (make-strarray)))
+    (guard-errors tag-list
+      ((foreign-lambda int git_tag_list strarray repository) sa repo))
+    (strarray-strings sa)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tree.h
