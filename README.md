@@ -34,7 +34,7 @@ are more than welcome.
 
 ## Contact
 
-  * Evan Hanson <evan@evanhanson.com>
+  * Evan Hanson <evhan@thunktastic.com>
 
 ## License
 

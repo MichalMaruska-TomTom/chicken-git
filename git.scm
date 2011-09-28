@@ -5,6 +5,7 @@
 ;; See LICENSE for details
 ;;
 ;; Approaching usability.
+;; Needs more testing.
 
 (module git
   (object-id object-type object-sha

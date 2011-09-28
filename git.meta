@@ -2,4 +2,5 @@
  (category misc)
  (author "Evan Hanson")
  (synopsis "libgit2 bindings")
- (foreign-depends "libgit2"))
+ (foreign-depends "libgit2")
+ (hidden))
