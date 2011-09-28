@@ -18,7 +18,7 @@
    commit create-commit commit-id commit-message commit-message-short
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
-   blob blob-content blob-size
+   blob* blob*-content blob*-size
    index-open index-find index-ref index->list
    index-clear index-add index-remove index-read index-write
    index-entrycount index-entrycount-unmerged
@@ -26,7 +26,7 @@
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
    index-entry-flags index-entry-extended index-entry-path
    index-entry-id index-entry-ctime index-entry-mtime
-   odb-new odb-open odb-id odb-read odb-has-object?
+   odb-new odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object-id odb-object-data odb-object-size odb-object-type
    make-signature signature-name signature-email
    signature-time signature-time-offset
@@ -37,9 +37,9 @@
   (import scheme
     (only srfi-1 iota)
     (only files normalize-pathname make-pathname)
-    (only lolevel record->vector record-instance-type)
     (except chicken repository-path)
-    (prefix git-lolevel git-))
+    (prefix git-lolevel git-)
+    (only lolevel record->vector record-instance-type number-of-bytes move-memory!))
   (require-library srfi-1 files lolevel git-lolevel)
 
 (define-for-syntax (s+ . args)
@@ -118,7 +118,7 @@
 
 (define (pointer->object ptr)
   (case (git-object-type ptr)
-    ((blob)   (pointer->blob ptr))
+    ((blob)   (pointer->blob* ptr))
     ((commit) (pointer->commit ptr))
     ((tag)    (pointer->tag ptr))
     ((tree)   (pointer->tree ptr))
@@ -222,16 +222,16 @@
 ;; Blobs
 
 (define-git-record-type
-  (blob rawsize rawcontent)
-  (format "#<commit ~S>" (oid->string (->oid blob) 7))
-  (git-blob-close))
+  (blob* rawsize rawcontent)
+  (format "#<blob* ~S>" (oid->string (->oid blob*) 7))
+  (git-blob*-close))
 
-(define blob-content blob-rawcontent)
-(define blob-size blob-rawsize)
+(define blob*-content blob*-rawcontent)
+(define blob*-size blob*-rawsize)
 
-(define (blob repo ref)
-  (pointer->blob
-    (git-blob-lookup
+(define (blob* repo ref)
+  (pointer->blob*
+    (git-blob*-lookup
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
 
@@ -316,7 +316,7 @@
 ;; ODB
 
 (define-git-record-type
-  (odb id)
+  (odb)
   (format "#<odb>")
   (git-odb-close))
 
@@ -339,14 +339,24 @@
                                "Invalid odb location"
                                loc)))))
 
-;; Not sure how to wrap this one
-;; so it returns something meaningful.
 (define (odb-read odb obj)
   (pointer->odb-object
     (git-odb-read (odb->pointer odb)
                   (oid->pointer (->oid obj)))))
 
-;; TODO odb-write, odb-hash
+(define (odb-write odb data #!optional (type 'blob) (len (number-of-bytes data)))
+  (pointer->oid (git-odb-write (odb->pointer odb) data len type)))
+
+(define (odb-hash data #!optional (type 'blob) (len (number-of-bytes data)))
+  (pointer->oid (git-odb-hash data len type)))
+
+(define (odb-object-data obj)
+  (let* ((obj* (odb-object->pointer obj))
+         (data (git-odb-object-data obj*))
+         (size (odb-object-size obj)))
+    (let ((dest (make-blob size)))
+      (move-memory! data dest size)
+      dest)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Signatures
@@ -386,10 +396,9 @@
 
 (define (tag-tagger tag) (pointer->signature (git-tag-tagger tag)))
 (define (tag-target tag) (pointer->object (git-tag-target tag)))
-
-(define (tag-delete repo tag)
+(define (tag-delete tag)
   (git-tag-delete
-    (repository->pointer repo)
+    (git-object-owner (tag->pointer tag))
     (tag-name tag)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -417,6 +426,15 @@
             ((number? key) (git-tree-entry-byindex tree* key))
             (else (git-git-error 'tree-ref "Invalid key" key))))))
 
+;; I'd like to do away with the repo argument
+;; here and use git_object_owner to figure it
+;; out automatically, but when a repository
+;; created that way is freed it invalidates
+;; any objects it has spawned (which would
+;; include the object returned here). We could
+;; do our own refcounting to delay freeing the
+;; repo but that sounds like hell on earth.
+;; We'll just leave the argument for now.
 (define (tree-entry->object repo entry)
   (pointer->object
     (git-tree-entry-2object

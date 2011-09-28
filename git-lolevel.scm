@@ -127,17 +127,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; blob.h
 
-(define/allocate blob* blob-lookup
+(define/allocate blob* blob*-lookup
   (git_blob_lookup (repository repo) (oid id)))
 
-(define/allocate blob* blob-lookup-prefix
+(define/allocate blob* blob*-lookup-prefix
   (git_blob_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
-(define blob-close             (foreign-lambda void git_blob_close blob*))
-(define blob-rawcontent        (foreign-lambda c-string git_blob_rawcontent blob*))
-(define blob-rawsize           (foreign-lambda int git_blob_rawsize blob*))
-(define blob-create-fromfile   (foreign-lambda int git_blob_create_fromfile oid repository c-string))
-(define blob-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
+(define blob*-close             (foreign-lambda void git_blob_close blob*))
+(define blob*-rawcontent        (foreign-lambda c-string git_blob_rawcontent blob*))
+(define blob*-rawsize           (foreign-lambda int git_blob_rawsize blob*))
+(define blob*-create-fromfile   (foreign-lambda int git_blob_create_fromfile oid repository c-string))
+(define blob*-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commit.h
@@ -252,7 +252,7 @@
 (define object-typeisloose (foreign-lambda bool git_object_typeisloose otype))
 
 ;; Conflicts with built-in, and we don't really need it.
-; (define object-size        (foreign-lambda unsigned-int git_object__size otype))
+; (define object-size        (foreign-lambda size_t git_object__size otype))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; odb_backend.h
@@ -281,22 +281,22 @@
   (let ((id (make-oid)))
     (guard-errors odb-write
       ((foreign-lambda int git_odb_write
-         oid odb c-pointer unsigned-int otype)
-         id  db  data      len          type))
+         oid odb c-pointer            size_t otype)
+         id  db  (make-locative data) len    type))
     id))
 
 (define (odb-hash data len type)
   (let ((id (make-oid)))
     (guard-errors odb-hash
       ((foreign-lambda int git_odb_hash
-         oid c-pointer unsigned-int otype)
-         id  data      len          type))
+         oid c-pointer            size_t otype)
+         id  (make-locative data) len    type))
     id))
 
 (define odb-object-close (foreign-lambda void git_odb_object_close odb-object))
 (define odb-object-id    (foreign-lambda oid git_odb_object_id odb-object))
 (define odb-object-data  (foreign-lambda c-pointer git_odb_object_data odb-object))
-(define odb-object-size  (foreign-lambda unsigned-int git_odb_object_size odb-object))
+(define odb-object-size  (foreign-lambda size_t git_odb_object_size odb-object))
 (define odb-object-type  (foreign-lambda otype git_odb_object_type odb-object))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -327,17 +327,17 @@
 
 (define oid-allocfmt     (foreign-lambda c-string git_oid_allocfmt oid))
 
-(define (oid-to-string n oid)
+(define (oid-to-string n id)
   (let* ((str (make-string n))
          (loc (make-locative str)))
     ((foreign-lambda c-string git_oid_to_string
-       (c-pointer char) unsigned-int oid)
-       loc (+ n 1) oid)))
+       (c-pointer char) size_t  oid)
+       loc              (+ n 1) id)))
 
 (define oid-cpy          (foreign-lambda void git_oid_cpy oid oid))
 (define oid-cmp          (foreign-lambda int git_oid_cmp oid oid))
 (define oid-ncmp         (foreign-lambda int git_oid_ncmp oid oid unsigned-int))
-(define oid-shorten-new  (foreign-lambda oid-shorten git_oid_shorten_new unsigned-int))
+(define oid-shorten-new  (foreign-lambda oid-shorten git_oid_shorten_new size_t))
 (define oid-shorten-free (foreign-lambda void git_oid_shorten_free oid-shorten))
 
 (define/retval oid-shorten-add
