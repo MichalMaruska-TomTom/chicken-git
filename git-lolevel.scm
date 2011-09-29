@@ -210,8 +210,39 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
 
-;; Maybe TODO bind git_error enum.
-;; git_lasterror gives us nice enough access to error messages for now.
+(define-foreign-enum-type (err int)
+  (err->int int->err)
+  ((success             err/success)              GIT_SUCCESS)
+  ((error               err/error)                GIT_ERROR)
+  ((notoid              err/notoid)               GIT_ENOTOID)
+  ((notfound            err/notfound)             GIT_ENOTFOUND)
+  ((nomem               err/nomem)                GIT_ENOMEM)
+  ((oserr               err/oserr)                GIT_EOSERR)
+  ((objtype             err/objtype)              GIT_EOBJTYPE)
+  ((notarepo            err/notarepo)             GIT_ENOTAREPO)
+  ((invtype             err/invalidtype)          GIT_EINVALIDTYPE)
+  ((missingobjdata      err/missingobjdata)       GIT_EMISSINGOBJDATA)
+  ((packcorrupt         err/packcorrupt)          GIT_EPACKCORRUPTED)
+  ((flockfail           err/flockfail)            GIT_EFLOCKFAIL)
+  ((zlib                err/zlib)                 GIT_EZLIB)
+  ((busy                err/busy)                 GIT_EBUSY)
+  ((bareindex           err/bareindex)            GIT_EBAREINDEX)
+  ((invrefname          err/invrefname)           GIT_EINVALIDREFNAME)
+  ((refcorrupt          err/refcorrupt)           GIT_EREFCORRUPTED)
+  ((toonestedsymref     err/toonestedsymref)      GIT_ETOONESTEDSYMREF)
+  ((packedrefscorrupted err/packedrefscorrupted)  GIT_EPACKEDREFSCORRUPTED)
+  ((invalidpath         err/invalidpath)          GIT_EINVALIDPATH)
+  ((revwalkover         err/revwalkover)          GIT_EREVWALKOVER)
+  ((invalidrefstate     err/invalidrefstate)      GIT_EINVALIDREFSTATE)
+  ((notimplemented      err/notimplemented)       GIT_ENOTIMPLEMENTED)
+  ((exists              err/exists)               GIT_EEXISTS)
+  ((overflow            err/overflow)             GIT_EOVERFLOW)
+  ((notnum              err/notnum)               GIT_ENOTNUM)
+  ((stream              err/stream)               GIT_ESTREAM)
+  ((invalidargs         err/invalidargs)          GIT_EINVALIDARGS)
+  ((objcorrupted        err/objcorrupted)         GIT_EOBJCORRUPTED)
+  ((ambiguousoidprefix  err/ambiguousoidprefix)   GIT_EAMBIGUOUSOIDPREFIX)
+  ((passthrough         err/passthrough)          GIT_EPASSTHROUGH))
 
 (define lasterror (foreign-lambda c-string git_lasterror))
 
