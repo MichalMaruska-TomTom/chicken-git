@@ -419,15 +419,27 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h
 
+(define-foreign-enum-type (sort int)
+  (sort->int int->sort)
+  ((none sort/none) GIT_SORT_NONE)
+  ((topo sort/topo) GIT_SORT_TOPOLOGICAL)
+  ((time sort/time) GIT_SORT_TIME)
+  ((rev sort/rev) GIT_SORT_REVERSE))
+
 (define/allocate revwalk revwalk-new
   (git_revwalk_new (repository repo)))
 
-(define revwalk-push (foreign-lambda int git_revwalk_push revwalk oid))
-(define revwalk-free (foreign-lambda void git_revwalk_free revwalk))
+(define revwalk-free        (foreign-lambda void git_revwalk_free revwalk))
+(define revwalk-reset       (foreign-lambda void git_revwalk_reset revwalk))
+(define revwalk-sorting     (foreign-lambda void git_revwalk_sorting revwalk sort))
+(define revwalk-repository  (foreign-lambda repository git_revwalk_repository revwalk))
+(define/retval revwalk-push (git_revwalk_push (revwalk wlk) (oid id)))
+(define/retval revwalk-hide (git_revwalk_hide (revwalk wlk) (oid id)))
 
 (define (revwalk-next walker)
   (let ((id (make-oid)))
-    ((foreign-lambda int git_revwalk_next oid revwalk) id walker)
+    (guard-errors revwalk-next
+      ((foreign-lambda int git_revwalk_next oid revwalk) id walker))
     id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

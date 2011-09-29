@@ -13,7 +13,7 @@
    repository-open repository-path repository-ref repository-empty? repository-bare?
    reference references create-reference reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
-   commit create-commit commit-id commit-message commit-message-short
+   commit commits create-commit commit-id commit-message commit-message-short
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
    blob* blob*-content blob*-size
@@ -112,6 +112,14 @@
         ((string? obj) (string->oid obj))
         ((reference? obj) (reference-id obj))
         (else (object-id obj))))
+
+;; Try to take obj as a reference.
+(define (->reference obj)
+  (cond ((string? obj) obj)
+        ((reference? obj) (reference-name obj))
+        (else (git-git-error '->reference
+                             "Not a valid reference"
+                             obj))))
 
 (define (pointer->object ptr)
   (case (git-object-type ptr)
@@ -228,13 +236,30 @@
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
 
+(define (commits repo #!key initial (hide '()) (sort 'none))
+  (map pointer->commit
+       (let ((walker (git-revwalk-new (repository->pointer repo))))
+         ;; Sort mode, one of '(none topo time rev)
+         (git-revwalk-sorting walker sort)
+         ;; Set hidden commits. These exclude
+         ;; full branches from the traversal,
+         ;; rather than just the commits.
+         (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
+                   (map oid->pointer (map ->oid hide)))
+         ;; Set initial revision.
+         ;; Use HEAD if none is given (allowed? safe?).
+         ;; HEAD should always exist if there's at least one commit, so...
+         (git-revwalk-push walker (oid->pointer (->oid (or initial (reference repo "HEAD")))))
+         (let lp ((acc '()))
+           (condition-case
+             (lp (cons (git-revwalk-next walker) acc))
+             ((git) acc))))))
+
 (define (create-commit repo #!key tree parents message author (committer author) (reference #f))
   (pointer->commit
     (apply git-commit-create
       (repository->pointer repo)
-      (cond ((string? reference) reference)
-            ((reference? reference) (reference-name reference))
-            (else #f))
+      (and reference (->reference reference))
       (signature->pointer author)
       (signature->pointer committer)
       message
@@ -281,6 +306,11 @@
                                "Invalid index location"
                                loc)))))
 
+(define (index-find ix path)
+  (and-let* ((pos (git-index-find (index->pointer ix) path))
+             ((<= 0 pos)))
+    pos))
+
 (define (index-add ix path #!optional (stage 0))
   (git-index-add (index->pointer ix) path stage))
 
@@ -292,11 +322,6 @@
           ((number? ref)
            (git-index-remove ix* ref))
           (else #f))))
-
-(define (index-find ix path)
-  (and-let* ((pos (git-index-find (index->pointer ix) path))
-             ((<= 0 pos)))
-    pos))
 
 (define (index-ref ix key #!optional (type 'merged))
   (case type
@@ -455,7 +480,7 @@
 (define (tree-entry->object repo entry)
   (pointer->object
     (git-tree-entry-2object
-      (repository->pointer entry)
+      (repository->pointer repo)
       (tree-entry->pointer entry))))
 
 (define (create-tree repo ix)
