@@ -46,7 +46,7 @@
      (define (<name> <arg> ...)
        (if (not (guard-errors '<name>
                   ((foreign-lambda int <cfun> <atype> ...) <arg> ...)))
-         #f)))))
+         #f))))) ;; Ignored, the if just forces a void return.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git2.h
@@ -188,7 +188,7 @@
 ;; (for return from e.g. git_reference_listall).
 (define (strarray-strings sa)
   ((foreign-lambda* c-string-list* ((strarray sa))
-     "char **s = (char **)malloc(sizeof(char **) * (sa->count + 1));
+     "char **s = (char **)malloc(sizeof(char **) * sa->count);
       memcpy(s, sa->strings, sizeof(char **) * sa->count);
       *(s + sa->count) = NULL;
       C_return(s);")

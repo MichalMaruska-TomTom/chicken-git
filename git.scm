@@ -10,10 +10,8 @@
 (module git
   (object-id object-type object-sha
    string->oid oid->string oid->path
-   repository-open repository-path
-   repository-empty? repository-bare?
-   repository-ref
-   reference references reference-resolve reference-owner
+   repository-open repository-path repository-ref repository-empty? repository-bare?
+   reference references create-reference reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
    commit create-commit commit-id commit-message commit-message-short
    commit-time commit-time-offset commit-parentcount
@@ -28,9 +26,8 @@
    index-entry-id index-entry-ctime index-entry-mtime
    odb-new odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object-id odb-object-data odb-object-size odb-object-type
-   make-signature signature-name signature-email
-   signature-time signature-time-offset
-   tag tags tag-id tag-type tag-name tag-message tag-delete
+   make-signature signature-name signature-email signature-time signature-time-offset
+   tag tags tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
    tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
    tree-entry->object)
@@ -99,7 +96,7 @@
   (pointer->oid (git-object-id (object->pointer obj))))
 
 (define (object-sha obj #!optional (len 40))
-  (oid->string (object-id obj) len))
+  (oid->string (->oid obj) len))
 
 (define (oid->string id #!optional (len 40))
   (git-oid-to-string (min len 40) (oid->pointer id)))
@@ -121,8 +118,7 @@
     ((blob)   (pointer->blob* ptr))
     ((commit) (pointer->commit ptr))
     ((tag)    (pointer->tag ptr))
-    ((tree)   (pointer->tree ptr))
-    (else #f)))
+    ((tree)   (pointer->tree ptr))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Repositories
@@ -161,7 +157,7 @@
 ;; References
 
 (define-git-record-type
-  (reference oid target type name)
+  (reference oid target type name delete)
   (format "#<reference ~S>" (reference-name reference)))
 
 ;; Follow symbolic references to get an OID.
@@ -173,6 +169,8 @@
 (define (reference-owner ref)   (pointer->repository (git-reference-owner (reference->pointer ref))))
 (define (reference-resolve ref) (pointer->reference (git-reference-resolve (reference->pointer ref))))
 
+(define (pack-references repo) (git-reference-packall (repository->pointer repo)))
+
 (define (reference repo name)
   (pointer->reference
     (git-reference-lookup
@@ -183,7 +181,32 @@
   (map (lambda (ref) (reference repo ref))
        (git-reference-listall (repository->pointer repo) type)))
 
-;; TODO rename, delete, set, pack
+;; This will overwrite existing references.
+;; There should probably be a flag or something
+;; to disable this. TODO, maybe.
+(define (create-reference repo name target #!optional symbolic?)
+  (let ((repo* (repository->pointer repo)))
+    (pointer->reference
+      (if (not symbolic?)
+        ;; Direct references are created by OID.
+        (git-reference-create-oid-f repo* name (oid->pointer (->oid target)))
+        ;; Symbolic references require the
+        ;; target to be given by a string.
+        (if (string? target)
+          (git-reference-create-symbolic-f repo* name target)
+          (git-git-error 'create-reference
+                         "Symbolic reference target must be a string"
+                         target))))))
+
+(define (reference-target-set ref target)
+  (git-reference-set-target (reference->pointer ref) target))
+
+(define (reference-id-set ref id)
+  (git-reference-set-oid (reference->pointer ref)
+                         (oid->pointer (->oid id))))
+
+(define (reference-rename ref name)
+  (git-reference-rename-f (reference->pointer ref) name))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commits
@@ -241,7 +264,7 @@
 ;; Index
 
 (define-git-record-type
-  (index entrycount entrycount-unmerged)
+  (index entrycount entrycount-unmerged read write clear)
   (format "#<index>")
   (git-index-free))
 
@@ -258,14 +281,8 @@
                                "Invalid index location"
                                loc)))))
 
-;; Wrap procedures so they return the index.
-;; All of these procedures mutate their argument. 
-(define (index-read  ix)  (git-index-read (index->pointer ix)) ix)
-(define (index-write ix)  (git-index-write (index->pointer ix)) ix)
-(define (index-clear ix)  (git-index-clear (index->pointer ix)) ix)
 (define (index-add ix path #!optional (stage 0))
-  (git-index-add (index->pointer ix) path stage)
-  ix)
+  (git-index-add (index->pointer ix) path stage))
 
 (define (index-remove ix ref)
   (let ((ix* (index->pointer ix)))
@@ -344,11 +361,11 @@
     (git-odb-read (odb->pointer odb)
                   (oid->pointer (->oid obj)))))
 
-(define (odb-write odb data #!optional (type 'blob) (len (number-of-bytes data)))
-  (pointer->oid (git-odb-write (odb->pointer odb) data len type)))
+(define (odb-write odb data #!optional (type 'blob))
+  (pointer->oid (git-odb-write (odb->pointer odb) data (number-of-bytes data) type)))
 
-(define (odb-hash data #!optional (type 'blob) (len (number-of-bytes data)))
-  (pointer->oid (git-odb-hash data len type)))
+(define (odb-hash data #!optional (type 'blob))
+  (pointer->oid (git-odb-hash data (number-of-bytes data) type)))
 
 (define (odb-object-data obj)
   (let* ((obj* (odb-object->pointer obj))
@@ -394,8 +411,8 @@
   (map (lambda (t) (tag repo t))
        (git-tag-list (repository->pointer repo))))
 
-(define (tag-tagger tag) (pointer->signature (git-tag-tagger tag)))
-(define (tag-target tag) (pointer->object (git-tag-target tag)))
+(define (tag-tagger tag) (pointer->signature (git-tag-tagger (tag->pointer tag))))
+(define (tag-target tag) (pointer->object (git-tag-target (tag->pointer tag))))
 (define (tag-delete tag)
   (git-tag-delete
     (git-object-owner (tag->pointer tag))
