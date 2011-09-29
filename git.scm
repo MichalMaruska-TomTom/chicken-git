@@ -27,7 +27,7 @@
    odb-new odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object-id odb-object-data odb-object-size odb-object-type
    make-signature signature-name signature-email signature-time signature-time-offset
-   tag tags tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
+   tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
    tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
    tree-entry->object)
@@ -256,15 +256,16 @@
              ((git) acc))))))
 
 (define (create-commit repo #!key tree parents message author (committer author) (reference #f))
-  (pointer->commit
-    (apply git-commit-create
-      (repository->pointer repo)
-      (and reference (->reference reference))
-      (signature->pointer author)
-      (signature->pointer committer)
-      message
-      (tree->pointer tree)
-      (map commit->pointer parents))))
+  (commit repo
+    (pointer->oid
+      (apply git-commit-create
+        (repository->pointer repo)
+        (and reference (->reference reference))
+        (signature->pointer author)
+        (signature->pointer committer)
+        message
+        (tree->pointer tree)
+        (map commit->pointer parents)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Blobs
@@ -363,7 +364,7 @@
   (git-odb-close))
 
 (define-git-record-type
-  (odb-object id data size type)
+  (odb-object id size type)
   (format "#<odb-object>")
   (git-odb-object-close))
 
@@ -442,6 +443,16 @@
   (git-tag-delete
     (git-object-owner (tag->pointer tag))
     (tag-name tag)))
+
+(define (create-tag repo #!key target name message tagger)
+  (repository-ref repo
+    (pointer->oid
+      (git-tag-create
+        (repository->pointer repo)
+        name
+        (object->pointer target)
+        (signature->pointer tagger)
+        message))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Trees

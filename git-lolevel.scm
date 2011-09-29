@@ -501,7 +501,7 @@
 (define (tag-create repo name target tagger msg)
   (let ((id (make-oid)))
     (guard-errors tag-create
-      ((foreign-lambda int git_tag_create_o
+      ((foreign-lambda int git_tag_create_fo
          oid repository c-string object signature c-string)
          id  repo       name     target tagger    msg))
     id))

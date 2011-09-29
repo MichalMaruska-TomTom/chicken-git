@@ -1,0 +1,203 @@
+[[tags: egg]]
+
+== git
+
+[[toc:]]
+
+=== Description
+
+Bindings to the [[http://libgit2.github.com|libgit2]] library.
+
+=== Documentation
+
+{{git}} provides an interface for reading & manipulating git repositories.
+The library is split into two modules, {{git}} and {{git-lolevel}}:
+
+* {{git-lolevel}} is essentially just the libgit2 API, thinly wrapped. Most of
+  the function signatures remain the same, with a few exceptions: 
+
+** Structures & pointers that would go on the stack are allocated
+automatically.
+
+** Return values are checked where appropriate, signaling an exception of type
+{{git}} when negative.
+
+** Pointer arrays are converted to rest arguments.
+
+* {{git}} is a higher-level interface around {{git-lolevel}}, providing
+  record types for each libgit2 structure.
+
+The following documentation applies to the {{git}} module.
+
+=== Usage
+
+  (use git)
+
+or
+
+  (use git-lolevel)
+
+It's not recommended to mix the two without prefixing one or the other's
+imports, as the two libraries share many identifiers.
+
+=== API
+
+==== Repository
+
+<record>repository</record>
+<procedure>(repository-open path)              => repository</procedure>
+<procedure>(repository-path repository [type]) => string</procedure>
+<procedure>(repository-ref repository ref)     => object</procedure>
+<procedure>(repository-empty? repository)      => boolean</procedure>
+<procedure>(repository-bare? repositoy)        => boolean</procedure>
+<procedure>(pack-references repository)        => void</procedure>
+
+==== OID
+
+<record>oid</record>
+<procedure>(string->oid string)       => oid</procedure>
+<procedure>(oid->string oid [length]) => string</procedure>
+<procedure>(oid->path oid)            => string</procedure>
+
+==== Reference
+
+<record>reference</record>
+<procedure>(reference repository ref)                            => reference</procedure>
+<procedure>(references repository)                               => list</procedure>
+<procedure>(reference-id reference)                              => oid</procedure>
+<procedure>(reference-owner reference)                           => repository</procedure>
+<procedure>(reference-resolve reference)                         => reference</procedure>
+<procedure>(reference-id-set reference oid)                      => void</procedure>
+<procedure>(reference-rename reference name)                     => void</procedure>
+<procedure>(reference-target-set reference target)               => void</procedure>
+<procedure>(create-reference repository name target [symbolic?]) => reference</procedure>
+
+==== Generic
+
+<procedure>(object-id object)           => oid</procedure>
+<procedure>(object-sha object [length]) => string</procedure>
+<procedure>(object-type object)         => symbol</procedure>
+
+==== Blob*
+
+<record>blob*</record>
+<procedure>(blob* repository ref) => blob*</procedure>
+<procedure>(blob*-content blob)   => blob</procedure>
+<procedure>(blob*-size blob)      => int</procedure>
+
+==== Commit
+
+<record>commit</record>
+<procedure>(commit repository ref)                    => commit</procedure>
+<procedure>(commits repository initial [hide] [sort]) => list</procedure>
+<procedure>(commit-id commit)                         => oid</procedure>
+<procedure>(commit-parentcount commit)                => int</procedure>
+<procedure>(commit-time commit)                       => int</procedure>
+<procedure>(commit-time-offset commit)                => int</procedure>
+<procedure>(commit-message commit)                    => string</procedure>
+<procedure>(commit-message-short commit)              => string</procedure>
+<procedure>(commit-tree commit)                       => tree</procedure>
+<procedure>(commit-author commit)                     => signature</procedure>
+<procedure>(commit-committer commit)                  => signature</procedure>
+<procedure>(commit-parent commit [n])                 => commit</procedure>
+<procedure>(create-commit repository tree parents message author [committer] [reference]) => commit</procedure>
+
+==== Tag
+
+<record>tag</record>
+<procedure>(tag repository name) => tag</procedure>
+<procedure>(tags repository)     => list</procedure>
+<procedure>(tag-id tag)          => oid</procedure>
+<procedure>(tag-type tag)        => symbol</procedure>
+<procedure>(tag-name tag)        => string</procedure>
+<procedure>(tag-message tag)     => string</procedure>
+<procedure>(tag-tagger tag)      => signature</procedure>
+<procedure>(tag-target tag)      => object</procedure>
+<procedure>(tag-delete tag)      => tag</procedure>
+<procedure>(create-tag repository target name message tagger) => tag</procedure>
+
+==== Tree
+
+<record>tree</record>
+<procedure>(tree repository ref)          => tree</procedure>
+<procedure>(tree-id tree)                 => oid</procedure>
+<procedure>(tree-entrycount tree)         => int</procedure>
+<procedure>(tree-ref tree key)            => tree-entry</procedure>
+<procedure>(tree->list tree)              => list</procedure>
+<procedure>(create-tree repository index) => tree</procedure>
+
+==== Tree Entry
+
+<record>tree-entry</record>
+<procedure>(tree-entry-id tree-entry)                 => oid</procedure>
+<procedure>(tree-entry-name tree-entry)               => string</procedure>
+<procedure>(tree-entry-attributes tree-entry)         => int</procedure>
+<procedure>(tree-entry-type tree-entry)               => symbol</procedure>
+<procedure>(tree-entry->object repository tree-entry) => object</procedure>
+
+==== Index
+
+<record>index</record>
+<procedure>(index-open repo-or-path)         => index</procedure>
+<procedure>(index-entrycount index)          => int</procedure>
+<procedure>(index-entrycount-unmerged index) => int</procedure>
+<procedure>(index-read index)                => void</procedure>
+<procedure>(index-write index)               => void</procedure>
+<procedure>(index-clear index)               => void</procedure>
+<procedure>(index-add index path [stage])    => void</procedure>
+<procedure>(index-remove index ref)          => void</procedure>
+<procedure>(index-find index)                => int</procedure>
+<procedure>(index-ref index key)             => index-entry</procedure>
+<procedure>(index->list index [type])        => list</procedure>
+
+==== Index Entry
+
+<record>index-entry</record>
+<procedure>(index-entry-id index-entry)                 => oid</procedure>
+<procedure>(index-entry-path index-entry)               => string</procedure>
+<procedure>(index-entry-ctime index-entry)              => int</procedure>
+<procedure>(index-entry-mtime index-entry)              => int</procedure>
+<procedure>(index-entry-dev index-entry)                => int</procedure>
+<procedure>(index-entry-ino index-entry)                => int</procedure>
+<procedure>(index-entry-size index-entry)               => int</procedure>
+<procedure>(index-entry-stage index-entry)              => int</procedure>
+<procedure>(index-entry-uid index-entry)                => int</procedure>
+<procedure>(index-entry-gid index-entry)                => int</procedure>
+<procedure>(index-entry-mode index-entry)               => int</procedure>
+<procedure>(index-entry-flags index-entry)              => int</procedure>
+<procedure>(index-entry-extended index-entry)           => int</procedure>
+<procedure>(index-entry->object repository index-entry) => object</procedure>
+
+==== ODB
+
+<procedure>(odb-new)                   => odb</procedure>
+<procedure>(odb-open repo-or-path)     => odb</procedure>
+<procedure>(odb-has-object? odb ref)   => boolean</procedure>
+<procedure>(odb-read odb ref)          => odb-object</procedure>
+<procedure>(odb-write odb data [type]) => oid</procedure>
+<procedure>(odb-hash odb data [type])  => oid</procedure>
+
+==== ODB Object
+
+<record>odb-object</record>
+<procedure>(odb-object-id odb-object)   => oid</procedure>
+<procedure>(odb-object-size odb-object) => int</procedure>
+<procedure>(odb-object-type odb-object) => symbol</procedure>
+<procedure>(odb-object-data odb-object) => blob</procedure>
+
+==== Signature
+
+<record>signature</record>
+<procedure>(make-signature name email [time] [offset]) => signature</procedure>
+<procedure>(signature-name signature)                  => string</procedure>
+<procedure>(signature-email signature)                 => string</procedure>
+<procedure>(signature-time signature)                  => int</procedure>
+<procedure>(signature-time-offset signature)           => int</procedure>
+
+=== Author
+
+Evan Hanson
+
+=== License
+
+Copyright (c) 2011, Evan Hanson, 3-Clause BSD License

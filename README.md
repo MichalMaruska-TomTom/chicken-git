@@ -16,9 +16,13 @@ Assuming you have that, installation should be straightforward:
 The library is split into two modules, `git` and `git-lolevel`:
 
 * `git-lolevel` is essentially just the libgit2 API, thinly wrapped. Most of
-  the function signatures remain the same, with a few exceptions (namely,
-  structures that would go on the stack are automatically allocated and pointer
-  arrays are converted to rest arguments).
+  the function signatures remain the same, with a few exceptions: 
+
+  * Structures & pointers that would go on the stack are allocated
+    automatically.
+  * Return values are checked where appropriate, signaling an exception of type
+    'git when negative.
+  * Pointer arrays are converted to rest arguments.
 
 * `git` is a higher-level interface around `git-lolevel`, providing
   record types for each libgit2 structure.
@@ -29,8 +33,8 @@ Documentation will be written shortly.
 
 The API is nowhere near final, and open for improvement as it is used and
 common cases are identified. Some functionality is not yet provided, mainly
-configuration parsing, revwalking and custom backends. Obviously, patches
-are more than welcome.
+configuration parsing, custom backends and treebuilders. Obviously, patches are
+more than welcome.
 
 ## Contact
 
