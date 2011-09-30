@@ -275,8 +275,12 @@
   (format "#<blob* ~S>" (oid->string (->oid blob*) 7))
   (git-blob*-close))
 
-(define blob*-content blob*-rawcontent)
 (define blob*-size blob*-rawsize)
+(define (blob*-content blob*)
+  (let* ((size (blob*-size blob*))
+         (dest (make-blob size)))
+    (move-memory! (blob*-rawcontent blob*) dest size)
+    dest))
 
 (define (blob* repo ref)
   (pointer->blob*
@@ -396,10 +400,10 @@
 (define (odb-object-data obj)
   (let* ((obj* (odb-object->pointer obj))
          (data (git-odb-object-data obj*))
-         (size (odb-object-size obj)))
-    (let ((dest (make-blob size)))
-      (move-memory! data dest size)
-      dest)))
+         (size (odb-object-size obj))
+         (dest (make-blob size)))
+    (move-memory! data dest size)
+    dest))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Signatures

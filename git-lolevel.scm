@@ -134,7 +134,7 @@
   (git_blob_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
 (define blob*-close             (foreign-lambda void git_blob_close blob*))
-(define blob*-rawcontent        (foreign-lambda c-string git_blob_rawcontent blob*))
+(define blob*-rawcontent        (foreign-lambda c-pointer git_blob_rawcontent blob*))
 (define blob*-rawsize           (foreign-lambda int git_blob_rawsize blob*))
 (define blob*-create-fromfile   (foreign-lambda int git_blob_create_fromfile oid repository c-string))
 (define blob*-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
