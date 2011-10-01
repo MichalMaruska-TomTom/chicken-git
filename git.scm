@@ -312,9 +312,11 @@
                                loc)))))
 
 (define (index-find ix path)
-  (and-let* ((pos (git-index-find (index->pointer ix) path))
-             ((<= 0 pos)))
-    pos))
+  (if (not (string? path))
+    (git-git-error 'index-find "String required" path)
+    (and-let* ((pos (git-index-find (index->pointer ix) path))
+               ((<= 0 pos)))
+      pos)))
 
 (define (index-add ix path #!optional (stage 0))
   (git-index-add (index->pointer ix) path stage))
@@ -501,6 +503,15 @@
 (define (create-tree repo ix)
   (tree repo (pointer->oid (git-tree-create-fromindex (index->pointer ix)))))
 
-(define (tree->list tree)
-  (map (lambda (i) (tree-ref tree i))
+;; Returns a list of tree entries.
+;; A repository can optionally be
+;; given into which to recurse.
+(define (tree->list tree #!optional recurse)
+  (map (if (not recurse)
+         (lambda (i) (tree-ref tree i))
+         (lambda (i)
+           (let ((entry (tree-ref tree i)))
+             (case (tree-entry-type entry)
+               ((tree) (tree->list (tree-entry->object recurse entry) recurse))
+               (else entry)))))
        (iota (tree-entrycount tree)))))
