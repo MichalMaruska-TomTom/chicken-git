@@ -168,8 +168,7 @@
     (guard-errors commit-create
       ((foreign-lambda int git_commit_create_o
          oid repository c-string signature signature c-string tree int              pointer-vector)
-         id  repo       ref      author    commit    msg      tree (length parents) (apply pointer-vector
-                                                                                      (append parents #f))))
+         id  repo       ref      author    commit    msg      tree (length parents) (apply pointer-vector parents)))
     id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

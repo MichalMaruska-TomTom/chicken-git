@@ -139,7 +139,7 @@
 (define repository-empty? repository-is-empty)
 (define repository-bare? repository-is-bare)
 
-(define (repository-open path)
+(define (repository-open #!optional (path "."))
   ;; Try opening path as a "normal" repo first
   ;; (i.e. a workdir with a '.git' directory),
   ;; and if that doesn't work try as a "bare" repo.
@@ -155,11 +155,13 @@
   (git-repository-path (repository->pointer repo) type))
 
 (define (repository-ref repo ref #!optional (type 'any))
-  (pointer->object
-    (git-object-lookup
-      (repository->pointer repo)
-      (oid->pointer (->oid ref))
-      type)))
+  (condition-case
+    (pointer->object
+      (git-object-lookup
+        (repository->pointer repo)
+        (oid->pointer (->oid ref))
+        type))
+    ((git) #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; References
@@ -255,7 +257,7 @@
              (lp (cons (git-revwalk-next walker) acc))
              ((git) acc))))))
 
-(define (create-commit repo #!key tree parents message author (committer author) (reference #f))
+(define (create-commit repo #!key tree message (parents '()) author (committer author) (reference #f))
   (commit repo
     (pointer->oid
       (apply git-commit-create

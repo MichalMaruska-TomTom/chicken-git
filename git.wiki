@@ -45,7 +45,7 @@ imports, as the two libraries share many identifiers.
 ==== Repository
 
 <record>repository</record>
-<procedure>(repository-open path)              => repository</procedure>
+<procedure>(repository-open [path])            => repository</procedure>
 <procedure>(repository-path repository [type]) => string</procedure>
 <procedure>(repository-ref repository ref)     => object</procedure>
 <procedure>(repository-empty? repository)      => boolean</procedure>
@@ -100,7 +100,7 @@ imports, as the two libraries share many identifiers.
 <procedure>(commit-author commit)                     => signature</procedure>
 <procedure>(commit-committer commit)                  => signature</procedure>
 <procedure>(commit-parent commit [n])                 => commit</procedure>
-<procedure>(create-commit repository tree parents message author [committer] [reference]) => commit</procedure>
+<procedure>(create-commit repository tree message [parents] author [committer] [reference]) => commit</procedure>
 
 ==== Tag
 
@@ -123,7 +123,7 @@ imports, as the two libraries share many identifiers.
 <procedure>(tree-id tree)                 => oid</procedure>
 <procedure>(tree-entrycount tree)         => int</procedure>
 <procedure>(tree-ref tree key)            => tree-entry</procedure>
-<procedure>(tree->list tree)              => list</procedure>
+<procedure>(tree->list tree [repo])       => list</procedure>
 <procedure>(create-tree repository index) => tree</procedure>
 
 ==== Tree Entry
