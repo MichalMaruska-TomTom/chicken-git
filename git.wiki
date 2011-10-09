@@ -8,6 +8,10 @@
 
 Bindings to the [[http://libgit2.github.com|libgit2]] library.
 
+Please note that the libgit library is currently a moving target, under heavy
+development. This library has been written and tested against libgit2 0.13.0.
+If you encounter problems, check your versions.
+
 === Documentation
 
 {{git}} provides an interface for reading & manipulating git repositories.

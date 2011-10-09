@@ -11,6 +11,11 @@ Assuming you have that, installation should be straightforward:
     $ cd chicken-git
     $ chicken-install
 
+Please note that the libgit library is currently a moving target, under heavy
+development. This library has been written and tested against libgit2 0.13.0.
+I'll do my best to keep things up to date, but if you're running into problems,
+check your versions.
+
 ## API
 
 The library is split into two modules, `git` and `git-lolevel`:
@@ -27,14 +32,14 @@ The library is split into two modules, `git` and `git-lolevel`:
 * `git` is a higher-level interface around `git-lolevel`, providing
   record types for each libgit2 structure.
 
-Documentation will be written shortly.
+Limited documentation is available at <http://wiki.call-cc.org/eggref/4/git>.
 
 ## Notes
 
-The API is nowhere near final, and open for improvement as it is used and
-common cases are identified. Some functionality is not yet provided, mainly
-configuration parsing, custom backends and treebuilders. Obviously, patches are
-more than welcome.
+The API is nowhere near final, and open for improvement as it is used, common
+cases are identified, and libgit2 itself changes. Some functionality is not yet
+provided, mainly configuration parsing, custom backends and treebuilders.
+Obviously, patches are more than welcome.
 
 ## Contact
 

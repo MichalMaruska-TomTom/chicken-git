@@ -148,17 +148,17 @@
 (define/allocate commit commit-lookup-prefix
   (git_commit_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
-(define commit-close         (foreign-lambda void git_commit_close commit))
-(define commit-id            (foreign-lambda oid git_commit_id commit))
-(define commit-message-short (foreign-lambda c-string git_commit_message_short commit))
-(define commit-message       (foreign-lambda c-string git_commit_message commit))
-(define commit-time          (foreign-lambda time-t git_commit_time commit))
-(define commit-time-offset   (foreign-lambda int git_commit_time_offset commit))
-(define commit-committer     (foreign-lambda signature git_commit_committer commit))
-(define commit-author        (foreign-lambda signature git_commit_author commit))
-(define commit-tree-oid      (foreign-lambda oid git_commit_tree_oid commit))
-(define commit-parentcount   (foreign-lambda unsigned-int git_commit_parentcount commit))
-(define commit-parent-oid    (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
+(define commit-close            (foreign-lambda void git_commit_close commit))
+(define commit-id               (foreign-lambda oid git_commit_id commit))
+(define commit-message          (foreign-lambda c-string git_commit_message commit))
+(define commit-message-encoding (foreign-lambda c-string git_commit_message_encoding commit))
+(define commit-time             (foreign-lambda time-t git_commit_time commit))
+(define commit-time-offset      (foreign-lambda int git_commit_time_offset commit))
+(define commit-committer        (foreign-lambda signature git_commit_committer commit))
+(define commit-author           (foreign-lambda signature git_commit_author commit))
+(define commit-tree-oid         (foreign-lambda oid git_commit_tree_oid commit))
+(define commit-parentcount      (foreign-lambda unsigned-int git_commit_parentcount commit))
+(define commit-parent-oid       (foreign-lambda oid git_commit_parent_oid commit unsigned-int))
 
 (define/allocate tree commit-tree (git_commit_tree (commit cmt)))
 (define/allocate commit commit-parent (git_commit_parent (commit cmt) (unsigned-int n)))
@@ -166,9 +166,9 @@
 (define (commit-create repo ref author commit msg tree . parents)
   (let ((id (make-oid)))
     (guard-errors commit-create
-      ((foreign-lambda int git_commit_create_o
-         oid repository c-string signature signature c-string tree int              pointer-vector)
-         id  repo       ref      author    commit    msg      tree (length parents) (apply pointer-vector parents)))
+      ((foreign-lambda int git_commit_create
+         oid repository c-string signature signature c-string c-string tree int              pointer-vector)
+         id  repo       ref      author    commit    #f       msg      tree (length parents) (apply pointer-vector parents)))
     id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -389,16 +389,10 @@
   (git_reference_lookup (repository repo) (c-string name)))
 
 (define/allocate reference reference-create-symbolic
-  (git_reference_create_symbolic (repository repo) (c-string name) (c-string target)))
-
-(define/allocate reference reference-create-symbolic-f
-  (git_reference_create_symbolic_f (repository repo) (c-string name) (c-string target)))
+  (git_reference_create_symbolic (repository repo) (c-string name) (c-string target) (bool force)))
 
 (define/allocate reference reference-create-oid
-  (git_reference_create_oid (repository repo) (c-string name) (oid id)))
-
-(define/allocate reference reference-create-oid-f
-  (git_reference_create_oid_f (repository repo) (c-string name) (oid id)))
+  (git_reference_create_oid (repository repo) (c-string name) (oid id) (bool force)))
 
 (define reference-oid    (foreign-lambda oid git_reference_oid reference))
 (define reference-target (foreign-lambda c-string git_reference_target reference))
@@ -410,8 +404,7 @@
 
 (define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
 (define/retval reference-set-oid    (git_reference_set_oid (reference ref) (oid id)))
-(define/retval reference-rename     (git_reference_rename (reference ref) (c-string name)))
-(define/retval reference-rename-f   (git_reference_rename_f (reference ref) (c-string name)))
+(define/retval reference-rename     (git_reference_rename (reference ref) (c-string name) (bool force)))
 (define/retval reference-delete     (git_reference_delete (reference ref)))
 (define/retval reference-packall    (git_reference_packall (repository repo)))
 
@@ -475,8 +468,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; signature.h
 
-(define signature-new  (foreign-lambda signature git_signature_new c-string c-string time-t int))
-(define signature-now  (foreign-lambda signature git_signature_now c-string c-string))
+(define/allocate signature signature-new
+  (git_signature_new (c-string name) (c-string email) (time-t time) (int offset)))
+
+(define/allocate signature signature-now
+  (git_signature_now (c-string name) (c-string email)))
+
 (define signature-dup  (foreign-lambda signature git_signature_dup signature))
 (define signature-free (foreign-lambda void git_signature_free signature))
 
@@ -497,12 +494,12 @@
 (define tag-tagger     (foreign-lambda signature git_tag_tagger tag))
 (define tag-message    (foreign-lambda c-string git_tag_message tag))
 
-(define (tag-create repo name target tagger msg)
+(define (tag-create repo name target tagger msg force)
   (let ((id (make-oid)))
     (guard-errors tag-create
-      ((foreign-lambda int git_tag_create_fo
-         oid repository c-string object signature c-string)
-         id  repo       name     target tagger    msg))
+      ((foreign-lambda int git_tag_create
+         oid repository c-string object signature c-string int)
+         id  repo       name     target tagger    msg      force))
     id))
 
 (define/retval tag-delete

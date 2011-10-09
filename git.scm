@@ -13,7 +13,7 @@
    repository-open repository-path repository-ref repository-empty? repository-bare?
    reference references create-reference reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
-   commit commits create-commit commit-id commit-message commit-message-short
+   commit commits create-commit commit-id commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
    blob* blob*-content blob*-size
@@ -194,16 +194,16 @@
 ;; This will overwrite existing references.
 ;; There should probably be a flag or something
 ;; to disable this. TODO, maybe.
-(define (create-reference repo name target #!optional symbolic?)
+(define (create-reference repo name target #!optional symbolic? force)
   (let ((repo* (repository->pointer repo)))
     (pointer->reference
       (if (not symbolic?)
         ;; Direct references are created by OID.
-        (git-reference-create-oid-f repo* name (oid->pointer (->oid target)))
+        (git-reference-create-oid repo* name (oid->pointer (->oid target)) force)
         ;; Symbolic references require the
         ;; target to be given by a string.
         (if (string? target)
-          (git-reference-create-symbolic-f repo* name target)
+          (git-reference-create-symbolic repo* name target force)
           (git-git-error 'create-reference
                          "Symbolic reference target must be a string"
                          target))))))
@@ -215,14 +215,14 @@
   (git-reference-set-oid (reference->pointer ref)
                          (oid->pointer (->oid id))))
 
-(define (reference-rename ref name)
-  (git-reference-rename-f (reference->pointer ref) name))
+(define (reference-rename ref name #!optional force)
+  (git-reference-rename (reference->pointer ref) name force))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commits
 
 (define-git-record-type
-  (commit id message message-short time time-offset parentcount)
+  (commit id message message-encoding time time-offset parentcount)
   (format "#<commit ~S>" (oid->string (->oid commit) 7))
   (git-commit-close))
 
@@ -452,7 +452,7 @@
     (git-object-owner (tag->pointer tag))
     (tag-name tag)))
 
-(define (create-tag repo #!key target name message tagger)
+(define (create-tag repo #!key target name message tagger force)
   (repository-ref repo
     (pointer->oid
       (git-tag-create
@@ -460,7 +460,8 @@
         name
         (object->pointer target)
         (signature->pointer tagger)
-        message))))
+        message
+        force))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Trees
