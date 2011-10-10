@@ -12,7 +12,7 @@ Assuming you have that, installation should be straightforward:
     $ chicken-install
 
 Please note that the libgit library is currently a moving target, under heavy
-development. This library has been written and tested against libgit2 0.13.0.
+development. This library has been written and tested against libgit2 0.15.0.
 I'll do my best to keep things up to date, but if you're running into problems,
 check your versions.
 
