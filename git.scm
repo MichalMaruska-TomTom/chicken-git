@@ -239,7 +239,7 @@
       (oid->pointer (->oid ref)))))
 
 (define (commits repo #!key initial (hide '()) (sort 'none))
-  (map pointer->commit
+  (map (lambda (oid) (commit repo oid))
        (let ((walker (git-revwalk-new (repository->pointer repo))))
          ;; Sort mode, one of '(none topo time rev)
          (git-revwalk-sorting walker sort)
@@ -255,7 +255,8 @@
          (let lp ((acc '()))
            (condition-case
              (lp (cons (git-revwalk-next walker) acc))
-             ((git) acc))))))
+             ((git) (git-revwalk-free walker)
+                    (map pointer->oid acc)))))))
 
 (define (create-commit repo #!key tree message (parents '()) author (committer author) (reference #f))
   (commit repo
