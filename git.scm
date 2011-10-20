@@ -334,18 +334,23 @@
           (else #f))))
 
 (define (index-ref ix key #!optional (type 'merged))
-  (case type
-    ((merged)
-     (pointer->index-entry (git-index-get (index->pointer ix) key)))
-    ((unmerged)
-     (pointer->index-entry
-       (let ((ix* (index->pointer ix)))
+  (let ((ix* (index->pointer ix)))
+    (case type
+      ((merged)
+       (pointer->index-entry
+         (cond ((number? key) (git-index-get ix* key))
+               ((string? key)
+                (and-let* ((i (index-find ix key)))
+                  (git-index-get ix* i)))
+               (else (git-git-error 'index-ref "Invalid key" key)))))
+      ((unmerged)
+       (pointer->index-entry
          (cond ((string? key) (git-index-get-unmerged-bypath ix* key))
                ((number? key) (git-index-get-unmerged-byindex ix* key))
-               (else (git-git-error 'index-ref "Invalid key" key))))))
-    (else (git-git-error 'index-ref
-                         "Invalid index type specifier"
-                         type))))
+               (else (git-git-error 'index-ref "Invalid key" key)))))
+      (else (git-git-error 'index-ref
+                           "Invalid index type specifier"
+                           type)))))
 
 (define (index->list ix #!optional (type 'merged))
   (map (lambda (i) (index-ref ix i type))
