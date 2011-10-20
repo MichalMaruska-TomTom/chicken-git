@@ -20,7 +20,7 @@
    index-open index-find index-ref index->list
    index-clear index-add index-remove index-read index-write
    index-entrycount index-entrycount-unmerged
-   index-entry-dev index-entry-oid index-entry-ino index-entry-mode
+   index-entry-dev index-entry-ino index-entry-mode
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
    index-entry-flags index-entry-extended index-entry-path
    index-entry-id index-entry-ctime index-entry-mtime
