@@ -9,27 +9,27 @@
 
 (module git
   (object-id object-type object-sha
-   string->oid oid->string oid->path
-   repository-open repository-path repository-ref repository-empty? repository-bare?
-   reference references create-reference reference-resolve reference-owner
+   string->oid oid->string oid->path oid?
+   repository? repository-open repository-path repository-ref repository-empty? repository-bare?
+   reference? reference references create-reference reference-resolve reference-owner
    reference-id reference-name reference-target reference-type
-   commit commits create-commit commit-id commit-message commit-message-encoding
+   commit? commit commits create-commit commit-id commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
-   blob* blob*-content blob*-size
-   index-open index-find index-ref index->list
+   blob*? blob* blob*-content blob*-size
+   index? index-open index-find index-ref index->list
    index-clear index-add index-remove index-read index-write
    index-entrycount index-entrycount-unmerged
-   index-entry-dev index-entry-ino index-entry-mode
+   index-entry? index-entry-dev index-entry-ino index-entry-mode
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
    index-entry-flags index-entry-extended index-entry-path
    index-entry-id index-entry-ctime index-entry-mtime
-   odb-new odb-open odb-has-object? odb-read odb-write odb-hash
-   odb-object-id odb-object-data odb-object-size odb-object-type
-   make-signature signature-name signature-email signature-time signature-time-offset
-   tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
-   tree create-tree tree-id tree-entrycount tree-ref tree->list
-   tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
+   odb? odb-new odb-open odb-has-object? odb-read odb-write odb-hash
+   odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
+   signature? make-signature signature-name signature-email signature-time signature-time-offset
+   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
+   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
+   tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
    tree-entry->object)
   (import scheme
     (only srfi-1 iota)
@@ -145,11 +145,9 @@
   ;; and if that doesn't work try as a "bare" repo.
   (let ((path (normalize-pathname path)))
     (pointer->repository
-      (call-with-current-continuation
-        (lambda (return)
-          (condition-case
-            (return (git-repository-open (make-pathname path ".git")))
-            (exn () (git-repository-open path))))))))
+      (condition-case
+        (git-repository-open (make-pathname path ".git"))
+        ((git) (git-repository-open path))))))
 
 (define (repository-path repo #!optional (type 'path))
   (git-repository-path (repository->pointer repo) type))
