@@ -35,10 +35,7 @@ The following documentation applies to the {{git}} module.
 
 === Usage
 
-  (use git)
-
-or
-
+  (use git) ; or...
   (use git-lolevel)
 
 It's not recommended to mix the two without prefixing one or the other's
@@ -49,6 +46,7 @@ imports, as the two libraries share many identifiers.
 ==== Repository
 
 <record>repository</record>
+<procedure>(repository? obj)                   => boolean</procedure>
 <procedure>(repository-open [path])            => repository</procedure>
 <procedure>(repository-path repository [type]) => string</procedure>
 <procedure>(repository-ref repository ref)     => object</procedure>
@@ -59,6 +57,7 @@ imports, as the two libraries share many identifiers.
 ==== OID
 
 <record>oid</record>
+<procedure>(oid? obj)                 => boolean</procedure>
 <procedure>(string->oid string)       => oid</procedure>
 <procedure>(oid->string oid [length]) => string</procedure>
 <procedure>(oid->path oid)            => string</procedure>
@@ -66,6 +65,7 @@ imports, as the two libraries share many identifiers.
 ==== Reference
 
 <record>reference</record>
+<procedure>(reference? obj)                                      => boolean</procedure>
 <procedure>(reference repository ref)                            => reference</procedure>
 <procedure>(references repository)                               => list</procedure>
 <procedure>(reference-id reference)                              => oid</procedure>
@@ -85,6 +85,7 @@ imports, as the two libraries share many identifiers.
 ==== Blob*
 
 <record>blob*</record>
+<procedure>(blob*? obj)           => boolean</procedure>
 <procedure>(blob* repository ref) => blob*</procedure>
 <procedure>(blob*-content blob)   => blob</procedure>
 <procedure>(blob*-size blob)      => int</procedure>
@@ -92,6 +93,7 @@ imports, as the two libraries share many identifiers.
 ==== Commit
 
 <record>commit</record>
+<procedure>(commit? obj)                              => boolean</procedure>
 <procedure>(commit repository ref)                    => commit</procedure>
 <procedure>(commits repository initial [hide] [sort]) => list</procedure>
 <procedure>(commit-id commit)                         => oid</procedure>
@@ -109,6 +111,7 @@ imports, as the two libraries share many identifiers.
 ==== Tag
 
 <record>tag</record>
+<procedure>(tag? obj)            => boolean</procedure>
 <procedure>(tag repository name) => tag</procedure>
 <procedure>(tags repository)     => list</procedure>
 <procedure>(tag-id tag)          => oid</procedure>
@@ -123,6 +126,7 @@ imports, as the two libraries share many identifiers.
 ==== Tree
 
 <record>tree</record>
+<procedure>(tree? obj)                    => boolean</procedure>
 <procedure>(tree repository ref)          => tree</procedure>
 <procedure>(tree-id tree)                 => oid</procedure>
 <procedure>(tree-entrycount tree)         => int</procedure>
@@ -133,6 +137,7 @@ imports, as the two libraries share many identifiers.
 ==== Tree Entry
 
 <record>tree-entry</record>
+<procedure>(tree-entry? obj)                          => boolean</procedure>
 <procedure>(tree-entry-id tree-entry)                 => oid</procedure>
 <procedure>(tree-entry-name tree-entry)               => string</procedure>
 <procedure>(tree-entry-attributes tree-entry)         => int</procedure>
@@ -142,6 +147,7 @@ imports, as the two libraries share many identifiers.
 ==== Index
 
 <record>index</record>
+<procedure>(index? obj)                      => boolean</procedure>
 <procedure>(index-open repo-or-path)         => index</procedure>
 <procedure>(index-entrycount index)          => int</procedure>
 <procedure>(index-entrycount-unmerged index) => int</procedure>
@@ -157,6 +163,7 @@ imports, as the two libraries share many identifiers.
 ==== Index Entry
 
 <record>index-entry</record>
+<procedure>(index-entry? obj)                           => boolean</procedure>
 <procedure>(index-entry-id index-entry)                 => oid</procedure>
 <procedure>(index-entry-path index-entry)               => string</procedure>
 <procedure>(index-entry-ctime index-entry)              => int</procedure>
@@ -175,6 +182,7 @@ imports, as the two libraries share many identifiers.
 ==== ODB
 
 <record>odb</record>
+<procedure>(odb? obj)                  => boolean</procedure>
 <procedure>(odb-new)                   => odb</procedure>
 <procedure>(odb-open repo-or-path)     => odb</procedure>
 <procedure>(odb-has-object? odb ref)   => boolean</procedure>
@@ -185,6 +193,7 @@ imports, as the two libraries share many identifiers.
 ==== ODB Object
 
 <record>odb-object</record>
+<procedure>(odb-object? obj)            => boolean</procedure>
 <procedure>(odb-object-id odb-object)   => oid</procedure>
 <procedure>(odb-object-size odb-object) => int</procedure>
 <procedure>(odb-object-type odb-object) => symbol</procedure>
@@ -193,6 +202,7 @@ imports, as the two libraries share many identifiers.
 ==== Signature
 
 <record>signature</record>
+<procedure>(signature? obj)                            => boolean</procedure>
 <procedure>(make-signature name email [time] [offset]) => signature</procedure>
 <procedure>(signature-name signature)                  => string</procedure>
 <procedure>(signature-email signature)                 => string</procedure>
