@@ -358,7 +358,7 @@
 (define oid-allocfmt     (foreign-lambda c-string git_oid_allocfmt oid))
 
 (define (oid-to-string n id)
-  (let* ((str (make-string n))
+  (let* ((str (make-string (max n 1)))
          (loc (make-locative str)))
     ((foreign-lambda c-string git_oid_to_string
        (c-pointer char) size_t  oid)
