@@ -207,7 +207,13 @@
                          target))))))
 
 (define (reference-target-set ref target)
-  (git-reference-set-target (reference->pointer ref) target))
+  (git-reference-set-target
+    (reference->pointer ref)
+    (cond ((string? target) target)
+          ((reference? target) (reference-name target))
+          (else (git-git-error 'reference-target-set
+                               "Invalid target specifier"
+                               target)))))
 
 (define (reference-id-set ref id)
   (git-reference-set-oid (reference->pointer ref)
