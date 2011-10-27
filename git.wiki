@@ -9,8 +9,8 @@
 Bindings to the [[http://libgit2.github.com|libgit2]] library.
 
 Please note that the libgit library is currently a moving target, under heavy
-development. This library has been written and tested against libgit2 0.15.0.
-If you encounter problems, check your versions.
+development. This library has been written and tested against Chicken 4.6 & 4.7
+and libgit2 0.15.0. If you encounter problems, check your versions.
 
 === Documentation
 
@@ -47,55 +47,181 @@ imports, as the two libraries share many identifiers.
 
 <record>repository</record>
 <procedure>(repository? obj) => boolean</procedure>
+
+A {{repository}} corresponds to an on-disk Git repository.
+
 <procedure>(repository-open [path]) => repository</procedure>
+
+Opens the Git repository indicated by {{path}}, or to the value of
+{{current-directory}} if no {{path}} is given. {{path}} may specify a bare
+repository, a working directory containing ".git" directory, or a ".git"
+directory directly.
+
 <procedure>(repository-path repository [type]) => string</procedure>
-<procedure>(repository-ref repository ref) => object</procedure>
+
+Returns the absolute path to the given {{repository}}. A {{type}} symbol may be
+given in order to retrieve alternate paths for the repository, and should be
+one of {{path}} (the default), {{index}}, {{odb}} or {{workdir}}.
+
+<procedure>(repository-ref repository ref [type]) => object</procedure>
+
+Looks up a Git object in the given {{repository}}. {{ref}} may be a SHA1 string,
+{{oid}}, {{reference}}, {{blob*}}, {{commit}}, {{tag}} or {{tree}}. The returned
+object will be of type {{blob*}}, {{commit}}, {{tag}} or {{tree}}, or {{#f}} if
+no object matching the given {{ref}} is found. An optional {{type}} symbol may
+be given in order to enforce an object type for which to search.
+
 <procedure>(repository-empty? repository) => boolean</procedure>
 <procedure>(repository-bare? repositoy) => boolean</procedure>
+
+Returns a boolean indicating whether the given {{repository}} is empty
+(contains no commits) or bare (an exposed git directory without a working
+directory).
+
 <procedure>(pack-references repository) => void</procedure>
+
+Writes all loose references in the given {{repository}} into its "pack-refs"
+file and removes them from the on-disk repository. Calling this function will
+invalidate any existing {{reference}} objects belonging to the repository.
 
 ==== OID
 
 <record>oid</record>
 <procedure>(oid? obj) => boolean</procedure>
+
+An {{oid}} is a unique reference to a Git object, corresponding to a
+40-character SHA1 object name.
+
 <procedure>(string->oid string) => oid</procedure>
+
+Creates an {{oid}} from the given string, which should be a 40-character SHA1
+hash. An error is signaled if the string is not a valid hash.
+
 <procedure>(oid->string oid [length]) => string</procedure>
+
+Returns the string representation of the given {{oid}}. The optional integer
+{{length}} specifies the length of the returned string, up to 40 characters.
+
 <procedure>(oid->path oid) => string</procedure>
+
+Returns the string representation of the given {{oid}} in the form "xx/...",
+where "xx" is the first two characters of the SHA1 and "..." is the remainder.
 
 ==== Reference
 
 <record>reference</record>
 <procedure>(reference? obj) => boolean</procedure>
+
+A {{reference}} is an indirect pointer to a Git commit object. A repository's
+"HEAD" is a common example.
+
 <procedure>(reference repository ref) => reference</procedure>
+
+Returns the {{reference}} specified by the given string {{ref}} from the
+{{repository}}. {{ref}} must refer to a valid reference, such as "HEAD",
+"ref/heads/master", or "refs/tags/v0.1.0". An error is signalled if the
+reference doesn't exists.
+
 <procedure>(references repository) => list</procedure>
+
+Returns a list of all references in the given {{repository}}.
+
 <procedure>(reference-id reference) => oid</procedure>
 <procedure>(reference-owner reference) => repository</procedure>
+
+Returns the {{repository}} to which the given {{reference}} belongs.
+
 <procedure>(reference-resolve reference) => reference</procedure>
+
+Dereferences the given (possibly symbolic) {{reference}}, returning a new
+non-symbolic {{reference}} that points directly to a commit.
+
 <procedure>(reference-id-set reference oid) => void</procedure>
-<procedure>(reference-rename reference name) => void</procedure>
 <procedure>(reference-target-set reference target) => void</procedure>
-<procedure>(create-reference repository name target [symbolic?]) => reference</procedure>
+<procedure>(reference-rename reference name) => void</procedure>
+
+{{reference-id-set}} updates a given non-symbolic {{reference}} to refer to
+the given {{oid}}.
+
+{{reference-target-set}} updates a given symbolic {{reference}} to refer to the
+given {{target}}, which should be a reference name or {{reference}}.
+
+{{reference-rename}} changes the name of the given {{reference}} to the string
+{{name}}.
+
+On success, the on-disk repository is immediately updated.
+
+<procedure>(create-reference repository name target [symbolic? [force?]]) => reference</procedure>
+
+Creates & returns a new reference in the given {{repository}} for the specified
+{{name}} and {{target}}. If {{symbolic?}} is given and not {{#f}}, the created
+reference will be so, and {{target}} must be a reference name or {{reference}}.
+Otherwise, {{target}} must be a SHA1 string, {{oid}}, {{commit}} or
+{{reference}} to a {{commit}}. If a reference of the given {{name}} exists and
+{{force?}} is not given or {{#f}}, an error is signalled. Otherwise, creation
+is forced and the old reference will be overwritten.
+
+On success, the on-disk repository is immediately updated.
 
 ==== Generic
 
 <procedure>(object-id object) => oid</procedure>
+
+Returns the {{oid}} referring to the given object, which must be a {{commit}},
+{{tree}}, {{tag}} or {{blob*}}.
+
 <procedure>(object-sha object [length]) => string</procedure>
+
+Returns the SHA1 identifier corresponding to the given object, which may be a
+{{commit}}, {{tree}}, {{tag}} {{blob*}}, {{reference}}, {{oid}} or {{string}}.
+
 <procedure>(object-type object) => symbol</procedure>
+
+Returns a symbol specifying the type of the given object, which must be one of
+{{commit}}, {{tree}}, {{tag}} or {{blob*}}. {{#f}} is returned if the type
+cannot be determined.
 
 ==== Blob*
 
 <record>blob*</record>
 <procedure>(blob*? obj) => boolean</procedure>
+
+A {{blob*}} corresponds to Git's Blob object type, renamed in order to avoid
+name clashes with Chicken's built-in {{blob}} type.
+
 <procedure>(blob* repository ref) => blob*</procedure>
-<procedure>(blob*-content blob) => blob</procedure>
-<procedure>(blob*-size blob) => int</procedure>
+
+Returns the {{blob*}} specified by the given {{ref}} from the repository.
+{{ref}} may be a SHA1 string, {{oid}}, or {{blob*}}. An error is signaled if
+no such {{blob*}} exists.
+
+<procedure>(blob*-content blob*) => blob</procedure>
+
+Returns a {{blob}} (of the Chicken built-in type) with the contents of the given
+{{blob*}} (of the Git object type).
+
+<procedure>(blob*-size blob*) => int</procedure>
+
+Returns the size in bytes of the given {{blob*}}.
 
 ==== Commit
 
 <record>commit</record>
 <procedure>(commit? obj) => boolean</procedure>
+
+A {{commit}} corresponds to Git's commit object type.
+
 <procedure>(commit repository ref) => commit</procedure>
+
+Returns the {{commit}} specified by the given {{ref}} from the repository.
+{{ref}} may be a SHA1 string, {{oid}}, {{reference}} or {{commit}}. An error
+is signaled if no such {{commit}} exists.
+
 <procedure>(commits repository initial [hide] [sort]) => list</procedure>
+
+Returns a list of all tags in the given {{repository}} ordered by date,
+increasing.
+
 <procedure>(commit-id commit) => oid</procedure>
 <procedure>(commit-parentcount commit) => int</procedure>
 <procedure>(commit-time commit) => int</procedure>
@@ -106,28 +232,64 @@ imports, as the two libraries share many identifiers.
 <procedure>(commit-author commit) => signature</procedure>
 <procedure>(commit-committer commit) => signature</procedure>
 <procedure>(commit-parent commit [n]) => commit</procedure>
-<procedure>(create-commit repository tree message [parents] author [committer] [reference]) => commit</procedure>
+
+<procedure>(create-commit repository #!key message tree [parents] author [committer] [reference]) => commit</procedure>
+
+Creates & returns a new commit in the given {{repository}}. The string
+{{message}} will be used as the commit's message and {{tree}} will be the file
+tree of the commit. {{parents}} should be be a (possibly empty) list of commits
+to be used as this commit's parents. {{author}} and {{committer}} should be
+signatures; if {{committer}} is not given, {{author}} will be used for both.
+{{reference}}, if given and not {{#f}}, should be the {{reference}} that will
+be updated to point to the newly-created commit.
+
+Note that if no {{reference}} is given, the commit will be created in Git's
+database but will not be reflected in any of the repository's branches. To
+update the the working branch with the new commit, for example, use "HEAD".
+
+On success, the on-disk repository is immediately updated.
 
 ==== Tag
 
 <record>tag</record>
 <procedure>(tag? obj) => boolean</procedure>
+
+A {{tag}} corresponds to Git's Tag object type.
+
 <procedure>(tag repository name) => tag</procedure>
+
+Creates & returns the {{tag}} specified by the given {{ref}} from the
+repository. {{ref}} may be a SHA1 string, {{oid}}, or {{tag}}. An error is
+signaled if no such {{tag}} exists.
+
 <procedure>(tags repository) => list</procedure>
+
+Returns a list of all tags in the given {{repository}}.
+
 <procedure>(tag-id tag) => oid</procedure>
 <procedure>(tag-type tag) => symbol</procedure>
 <procedure>(tag-name tag) => string</procedure>
 <procedure>(tag-message tag) => string</procedure>
+
 <procedure>(tag-tagger tag) => signature</procedure>
 <procedure>(tag-target tag) => object</procedure>
 <procedure>(tag-delete tag) => tag</procedure>
+
 <procedure>(create-tag repository target name message tagger) => tag</procedure>
 
 ==== Tree
 
 <record>tree</record>
 <procedure>(tree? obj) => boolean</procedure>
+
+A {{tree}} corresponds to Git's Tree object type.
+
 <procedure>(tree repository ref) => tree</procedure>
+
+Returns the {{tree}} specified by the given {{ref}} from the repository. {{ref}}
+may be a SHA1 string, {{oid}}, or {{tree}}. An error is signaled if no such
+{{tree}} exists.
+
 <procedure>(tree-id tree) => oid</procedure>
 <procedure>(tree-entrycount tree) => int</procedure>
 <procedure>(tree-ref tree key) => tree-entry</procedure>
