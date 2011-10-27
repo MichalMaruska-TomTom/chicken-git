@@ -139,7 +139,7 @@
 (define repository-empty? repository-is-empty)
 (define repository-bare? repository-is-bare)
 
-(define (repository-open #!optional (path "."))
+(define (repository-open #!optional (path (current-directory)))
   ;; Try opening path as a "normal" repo first
   ;; (i.e. a workdir with a '.git' directory),
   ;; and if that doesn't work try as a "bare" repo.
@@ -200,22 +200,11 @@
         (git-reference-create-oid repo* name (oid->pointer (->oid target)) force?)
         ;; Symbolic references require the
         ;; target to be given by a string.
-        (git-reference-create-symbolic repo* name
-          (cond ((string? target) target)
-                ((reference? target) (reference-name target))
-                (else (git-git-error 'reference-target-set
-                                     "Invalid symbolic reference target specifier"
-                                     target)))
-          force?)))))
+        (git-reference-create-symbolic repo* name (->reference target) force?)))))
 
 (define (reference-target-set ref target)
-  (git-reference-set-target
-    (reference->pointer ref)
-    (cond ((string? target) target)
-          ((reference? target) (reference-name target))
-          (else (git-git-error 'reference-target-set
-                               "Invalid target specifier"
-                               target)))))
+  (git-reference-set-target (reference->pointer ref)
+                            (->reference target)))
 
 (define (reference-id-set ref id)
   (git-reference-set-oid (reference->pointer ref)
