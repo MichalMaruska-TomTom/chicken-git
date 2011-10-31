@@ -136,15 +136,15 @@ Returns the {{repository}} to which the given {{reference}} belongs.
 Dereferences the given (possibly symbolic) {{reference}}, returning a new
 non-symbolic {{reference}} that points directly to a commit.
 
-<procedure>(reference-id-set reference oid) => void</procedure>
 <procedure>(reference-target-set reference target) => void</procedure>
 <procedure>(reference-rename reference name) => void</procedure>
 
-{{reference-id-set}} updates a given non-symbolic {{reference}} to refer to
-the given {{oid}}.
-
-{{reference-target-set}} updates a given symbolic {{reference}} to refer to the
-given {{target}}, which should be a reference name or {{reference}}.
+{{reference-target-set}} updates a {{reference}} to refer to the given
+{{target}}. If {{reference}} is an immediate reference (referring to an object
+ID), {{target}} must be an {{oid}}, {{commit}}, or SHA1 string. If
+{{reference}} is symbolic, {{target}} must be a {{reference}} or reference
+name. It is an error to assign a symbolic reference an OID target or
+vice-versa.
 
 {{reference-rename}} changes the name of the given {{reference}} to the string
 {{name}}.

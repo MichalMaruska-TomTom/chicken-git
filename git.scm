@@ -12,7 +12,7 @@
    string->oid oid->string oid->path oid?
    repository? repository-open repository-path repository-ref repository-empty? repository-bare?
    reference? reference references create-reference reference-resolve reference-owner
-   reference-id reference-name reference-target reference-type
+   reference-id reference-name reference-target reference-type reference-target-set reference-rename
    commit? commit commits create-commit commit-id commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
@@ -33,6 +33,7 @@
    tree-entry->object)
   (import scheme
     (only srfi-1 iota)
+    (only posix current-directory)
     (only files normalize-pathname make-pathname)
     (except chicken repository-path)
     (prefix git-lolevel git-)
@@ -113,11 +114,11 @@
         ((reference? obj) (reference-id obj))
         (else (object-id obj))))
 
-;; Try to take obj as a reference.
-(define (->reference obj)
+;; Try to convert obj to a reference name.
+(define (->reference-name obj)
   (cond ((string? obj) obj)
         ((reference? obj) (reference-name obj))
-        (else (git-git-error '->reference
+        (else (git-git-error '->reference-name
                              "Not a valid reference"
                              obj))))
 
@@ -200,15 +201,24 @@
         (git-reference-create-oid repo* name (oid->pointer (->oid target)) force?)
         ;; Symbolic references require the
         ;; target to be given by a string.
-        (git-reference-create-symbolic repo* name (->reference target) force?)))))
+        (git-reference-create-symbolic repo* name (->reference-name target) force?)))))
 
 (define (reference-target-set ref target)
-  (git-reference-set-target (reference->pointer ref)
-                            (->reference target)))
-
-(define (reference-id-set ref id)
-  (git-reference-set-oid (reference->pointer ref)
-                         (oid->pointer (->oid id))))
+  (let ((ref* (reference->pointer ref)))
+    (cond ((reference? target)
+           (git-reference-set-target ref* (->reference-name target)))
+          ((commit? target)
+           (git-reference-set-oid ref* (oid->pointer (commit-id target))))
+          ((oid? target)
+           (git-reference-set-oid ref* (oid->pointer target)))
+          ((string? target)
+           (condition-case
+             (git-reference-set-oid ref* (oid->pointer (string->oid target)))
+             ((git) (git-reference-set-target ref* target))))
+          (else (git-git-error
+                  'reference-target-set
+                  "Invalid reference target"
+                  target)))))
 
 (define (reference-rename ref name #!optional force)
   (git-reference-rename (reference->pointer ref) name force))
@@ -258,7 +268,7 @@
     (pointer->oid
       (apply git-commit-create
         (repository->pointer repo)
-        (and reference (->reference reference))
+        (and reference (->reference-name reference))
         (signature->pointer author)
         (signature->pointer committer)
         message
