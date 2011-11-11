@@ -5,6 +5,7 @@ libgit2 bindings for Chicken Scheme.
 ## Install
 
 Obviously, libgit2 is required: <http://github.com/libgit2/>.
+
 Assuming you have that, installation should be straightforward:
 
     $ git clone git://github.com/evhan/chicken-git.git
@@ -32,14 +33,13 @@ The library is split into two modules, `git` and `git-lolevel`:
 * `git` is a higher-level interface around `git-lolevel`, providing
   record types for each libgit2 structure.
 
-Limited documentation is available at <http://wiki.call-cc.org/eggref/4/git>.
+Documentation is available at <http://wiki.call-cc.org/egg/git>.
 
 ## Notes
 
-The API is nowhere near final, and open for improvement as it is used, common
-cases are identified, and libgit2 itself changes. Some functionality is not yet
-provided, mainly configuration parsing, custom backends and treebuilders.
-Obviously, patches are more than welcome.
+Some functionality is not yet provided, mainly configuration parsing,
+custom backends and treebuilders. Obviously, patches are more than
+welcome.
 
 ## Contact
 
