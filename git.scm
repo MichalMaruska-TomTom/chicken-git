@@ -193,7 +193,7 @@
 ;; This will overwrite existing references.
 ;; There should probably be a flag or something
 ;; to disable this. TODO, maybe.
-(define (create-reference repo name target #!optional symbolic? force?)
+(define (create-reference repo #!key name target symbolic? force?)
   (let ((repo* (repository->pointer repo)))
     (pointer->reference
       (if (not symbolic?)
