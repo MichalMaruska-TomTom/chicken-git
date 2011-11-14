@@ -24,7 +24,7 @@
    index-entry-uid index-entry-gid index-entry-size index-entry-stage
    index-entry-flags index-entry-extended index-entry-path
    index-entry-id index-entry-ctime index-entry-mtime
-   odb? odb-new odb-open odb-has-object? odb-read odb-write odb-hash
+   odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
@@ -386,8 +386,6 @@
   (odb-object id size type)
   (format "#<odb-object>")
   (git-odb-object-close))
-
-(define (odb-new) (pointer->odb (git-odb-new)))
 
 (define (odb-has-object? odb obj)
   (git-odb-exists (odb->pointer odb)
