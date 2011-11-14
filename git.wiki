@@ -357,8 +357,8 @@ include entries of contained directories.
 <procedure>(tree-ref tree key) => tree-entry</procedure>
 
 Returns a {{tree-entry}} object for the given {{key}}, or {{#f}} if no such
-object is found. {{key}} may be a numerical index or the string of an entry
-name.
+object is found. {{key}} may be a zero-based integer index or the full string
+pathname of an entry name.
 
 <procedure>(tree->list tree [repository]) => list</procedure>
 
@@ -403,26 +403,85 @@ and {{repository}}, which must be the owner of the {{tree-entry}}.
 
 <record>index</record>
 <procedure>(index? obj) => boolean</procedure>
+
+An {{index}} represents the on-disk state of Git's working tree. Changes made
+to a given {{index}} exist only in memory until written to disk using
+{{index-write}}.
+
 <procedure>(index-open repo-or-path) => index</procedure>
+
+It {{repo-or-path}} is a {{repository}}, returns the repository's index.  If it
+is a string, creates and returns the index at the given path, signaling an
+error if such an index doesn't exist. It is not possible to open the index of a
+bare repository, and doing so will result in an exception.
+
 <procedure>(index-entrycount index) => int</procedure>
 <procedure>(index-entrycount-unmerged index) => int</procedure>
+
+Returns the total number of index entries and unmerged index entries of the
+given {{index}}, respectively. This is essentially a count of all files tracked
+by Git in a given repository.
+
 <procedure>(index-read index) => void</procedure>
+
+Updates the given {{index}} to reflect the current state of the on-disk
+repository.
+
 <procedure>(index-write index) => void</procedure>
+
+Writes the state of the given {{index}} from memory onto disk, modifying the
+repository on success.
+
 <procedure>(index-clear index) => void</procedure>
+
+Removes all enries from a given {{index}}.
+
 <procedure>(index-add index path [stage]) => void</procedure>
+
+Adds a given {{path}}, which must refer to a file relative to the index's
+repository, to the {{index}}. If an integer {{stage}} is given, it will be used
+as the staging number for the changes.
+
 <procedure>(index-remove index ref) => void</procedure>
-<procedure>(index-find index) => int</procedure>
-<procedure>(index-ref index key) => index-entry</procedure>
+
+Removes an entry from the given {{index}}. {{ref}} may be a file path string or
+an zero-based integer index. If no entry is removed, {{#f}} is returned.
+
+<procedure>(index-find index path) => int</procedure>
+
+Returns the zero-based integer index of the file specified by {{path}} in the
+given {{index}}, signaling an error if it doesn't exist.
+
+<procedure>(index-ref index key [type]) => index-entry</procedure>
+
+Returns the {{index-entry}} from the {{index}} for the given {{key}}, which may
+be an zero-based integer index or a pathname string, or {{#f}} if no such entry
+exists. If a type symbol is given, either {{merged}} (the default behavior) or
+{{unmerged}}, the search will be limited to such entries.
+
 <procedure>(index->list index [type]) => list</procedure>
 
-TODO
+Returns a list of all {{index-entry}} objects in the given {{index}}. If a type
+symbol is given, either {{merged}} (the default behavior) or {{unmerged}}, the
+returned list will be limited to such entries.
 
 ==== Index Entry
 
 <record>index-entry</record>
 <procedure>(index-entry? obj) => boolean</procedure>
+
+An {{index-entry}} represents a tracked file in Git's working directory,
+belonging to an {{index}}.
+
 <procedure>(index-entry-id index-entry) => oid</procedure>
+
+Returns the {{oid}} referring to the given {{index-entry}}.
+
 <procedure>(index-entry-path index-entry) => string</procedure>
+
+Returns the file path of the given {{index-entry}} relative to the owning
+repository's working directory.
+
 <procedure>(index-entry-ctime index-entry) => int</procedure>
 <procedure>(index-entry-mtime index-entry) => int</procedure>
 <procedure>(index-entry-dev index-entry) => int</procedure>
@@ -434,22 +493,47 @@ TODO
 <procedure>(index-entry-mode index-entry) => int</procedure>
 <procedure>(index-entry-flags index-entry) => int</procedure>
 <procedure>(index-entry-extended index-entry) => int</procedure>
-<procedure>(index-entry->object repository index-entry) => object</procedure>
 
-TODO
+These methods return the file attributes for the given {{index-entry}} as it
+exists in its in-memory {{index}}.
 
 ==== ODB
 
 <record>odb</record>
 <procedure>(odb? obj) => boolean</procedure>
-<procedure>(odb-new) => odb</procedure>
+
+An {{odb}} offers a direct interface to Git's internal object database.
+
 <procedure>(odb-open repo-or-path) => odb</procedure>
+
+It {{repo-or-path}} is a {{repository}}, returns the repository's object
+database. If it is a string, creates and returns the object database at the
+given path, signaling an error if no such database exists.
+
 <procedure>(odb-has-object? odb ref) => boolean</procedure>
+
+Determines if the given {{odb}} contains the given object {{ref}}, which should
+be a SHA1 string, {{oid}} or Git object of type {{commit}}, {{blob*}}, {{tree}}
+or {{tag}}.
+
 <procedure>(odb-read odb ref) => odb-object</procedure>
+
+Reads the given object {{ref}} from the database, signaling an error if it
+doesn't exist. {{ref}} should be a SHA1 string, {{oid}} or Git object of type
+{{commit}}, {{blob*}}, {{tree}} or {{tag}}.
+
 <procedure>(odb-write odb data [type]) => oid</procedure>
+
+Writes a given data {{blob}} to the {{odb}}, returning an {{oid}} referring to
+the newly-created object. The type of the stored data can be specified by an
+optional {{type}} symbol, which defaults to {{blob}}.
+
 <procedure>(odb-hash odb data [type]) => oid</procedure>
 
-TODO
+Returns an {{oid}} reference for the given data {{blob}} as though it had been
+stored to the given {{odb}} but without writing it to disk. The type of the
+hashed data can be specified by an optional {{type}} symbol, which defaults to
+{{blob}}.
 
 ==== ODB Object
 
