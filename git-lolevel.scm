@@ -430,6 +430,9 @@
 (define/allocate repository repository-open
   (git_repository_open (c-string path)))
 
+(define/allocate repository repository-init
+  (git_repository_init (c-string path) (bool bare)))
+
 (define/allocate index repository-index
   (git_repository_index (repository repo)))
 

@@ -10,7 +10,8 @@
 (module git
   (object-id object-type object-sha
    string->oid oid->string oid->path oid?
-   repository? repository-open repository-path repository-ref repository-empty? repository-bare?
+   repository? create-repository repository-open
+   repository-path repository-ref repository-empty? repository-bare?
    reference? reference references create-reference reference-resolve reference-owner
    reference-id reference-name reference-target reference-type reference-target-set reference-rename
    commit? commit commits create-commit commit-id commit-message commit-message-encoding
@@ -161,6 +162,9 @@
         (oid->pointer (->oid ref))
         type))
     ((git) #f)))
+
+(define (create-repository #!optional (path (current-directory)) bare?)
+  (pointer->repository (git-repository-init path bare?)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; References
