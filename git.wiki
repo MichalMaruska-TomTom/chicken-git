@@ -12,6 +12,8 @@ Please note that the libgit library is currently a moving target, under heavy
 development. This library has been written and tested against Chicken 4.6 & 4.7
 and libgit2 0.15.0. If you encounter problems, check your versions.
 
+The source for this egg is available at [[http://github.com/evhan/chicken-git]].
+
 === Documentation
 
 {{git}} provides an interface for reading & manipulating git repositories.
