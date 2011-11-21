@@ -187,8 +187,8 @@
 ;; (for return from e.g. git_reference_listall).
 (define (strarray-strings sa)
   ((foreign-lambda* c-string-list* ((strarray sa))
-     "char **s = (char **)malloc(sizeof(char **) * sa->count);
-      memcpy(s, sa->strings, sizeof(char **) * sa->count);
+     "char **s = (char **)malloc(sizeof(char *) * (sa->count + 1));
+      memcpy(s, sa->strings, sizeof(char *) * (sa->count + 1));
       *(s + sa->count) = NULL;
       C_return(s);")
      sa))
@@ -243,7 +243,8 @@
   ((ambiguousoidprefix  err/ambiguousoidprefix)   GIT_EAMBIGUOUSOIDPREFIX)
   ((passthrough         err/passthrough)          GIT_EPASSTHROUGH))
 
-(define lasterror (foreign-lambda c-string git_lasterror))
+(define lasterror  (foreign-lambda c-string git_lasterror))
+(define clearerror (foreign-lambda void git_clearerror))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; index.h
@@ -436,11 +437,17 @@
 (define/allocate index repository-index
   (git_repository_index (repository repo)))
 
+(define/allocate reference repository-head
+  (git_repository_head (repository repo)))
+
 (define repository-database (foreign-lambda odb git_repository_database repository))
 (define repository-free     (foreign-lambda void git_repository_free repository))
 (define repository-is-empty (foreign-lambda bool git_repository_is_empty repository))
 (define repository-is-bare  (foreign-lambda bool git_repository_is_bare repository))
 (define repository-path     (foreign-lambda c-string git_repository_path repository path))
+
+(define repository-head-detached (foreign-lambda bool git_repository_head_detached repository))
+(define repository-head-orphan   (foreign-lambda bool git_repository_head_orphan repository))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h
