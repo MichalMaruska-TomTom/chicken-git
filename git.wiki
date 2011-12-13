@@ -114,14 +114,16 @@ where "xx" is the first two characters of the SHA1 and "..." is the remainder.
 <record>reference</record>
 <procedure>(reference? obj) => boolean</procedure>
 
-A {{reference}} is an indirect pointer to a Git commit object. A repository's
-{{"HEAD"}} is a common example.
+A {{reference}} is a direct or indirect pointer to a Git commit object. A
+repository's {{"HEAD"}} is a common example: it is a symbolic reference,
+referring to the immediate reference {{"refs/heads/master"}}, which in turn
+points at a {{commit}}.
 
 <procedure>(reference repository ref) => reference</procedure>
 
 Returns the {{reference}} specified by the given string {{ref}} from the
-{{repository}}. {{ref}} must refer to a valid reference, such as
-{{"HEAD"}}, {{"ref/heads/master"}}, or {{"refs/tags/v0.1.0"}}. An error is
+{{repository}}. {{ref}} must be a string referring to a valid reference, such
+as {{"HEAD"}}, {{"ref/heads/master"}}, or {{"refs/tags/v0.1.0"}}. An error is
 signalled if the reference doesn't exists.
 
 <procedure>(references repository) => list</procedure>
@@ -140,6 +142,11 @@ Returns the {{repository}} to which the given {{reference}} belongs.
 
 Dereferences the given (possibly symbolic) {{reference}}, returning a new
 non-symbolic {{reference}} pointing directly to a {{commit}}.
+
+<procedure>(reference-target reference) => string</procedure>
+
+Returns the name of the reference referred to by the given symbolic
+{{reference}}. It is an error if the given {{reference}} is not symbolic.
 
 <procedure>(reference-rename reference name) => void</procedure>
 <procedure>(reference-target-set reference target) => void</procedure>
@@ -283,7 +290,7 @@ On success, the on-disk repository is updated immediately.
 A {{tag}} corresponds to Git's Tag object type, which is a way to mark a
 specific object as special in some way.
 
-<procedure>(tag repository name) => tag</procedure>
+<procedure>(tag repository ref) => tag</procedure>
 
 Creates & returns the {{tag}} specified by the given {{ref}} from the
 repository. {{ref}} may be a SHA1 string, {{oid}}, or {{tag}}. An error is
@@ -305,7 +312,7 @@ be one of {{commit}}, {{tree}}, {{blob}}, or {{tag}}.
 <procedure>(tag-name tag) => string</procedure>
 <procedure>(tag-message tag) => string</procedure>
 
-Return the name or message strings of the given {{tag}}.
+Return the name or message of the given {{tag}}.
 
 <procedure>(tag-tagger tag) => signature</procedure>
 
