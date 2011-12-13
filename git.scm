@@ -12,9 +12,11 @@
    string->oid oid->string oid->path oid?
    repository? create-repository repository-open
    repository-path repository-ref repository-empty? repository-bare?
-   reference? reference references create-reference reference-resolve reference-owner
-   reference-id reference-name reference-target reference-type reference-target-set reference-rename
-   commit? commit commits create-commit commit-id commit-message commit-message-encoding
+   reference? reference references create-reference reference-resolve
+   reference-id reference-name reference-target reference-type
+   reference-target-set reference-rename reference-delete
+   commit? commit commits create-commit commit-id
+   commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
    blob*? blob* blob*-content blob*-size
@@ -170,7 +172,7 @@
 ;; References
 
 (define-git-record-type
-  (reference oid target type name delete)
+  (reference oid type name delete)
   (format "#<reference ~S>" (reference-name reference)))
 
 ;; Follow symbolic references to get an OID.
@@ -179,10 +181,14 @@
 ;; valid OIDs themselves, so we'll keep this
 ;; behavior for now...
 (define (reference-id ref)      (pointer->oid (reference-oid (reference-resolve ref))))
-(define (reference-owner ref)   (pointer->repository (git-reference-owner (reference->pointer ref))))
 (define (reference-resolve ref) (pointer->reference (git-reference-resolve (reference->pointer ref))))
 
 (define (pack-references repo) (git-reference-packall (repository->pointer repo)))
+
+(define (reference-target ref)
+  (if (not (eq? (reference-type ref) 'symbolic))
+    (git-git-error 'reference-target "Reference must be symbolic" ref)
+    (git-reference-target (reference->pointer ref))))
 
 (define (reference repo name)
   (pointer->reference
@@ -248,24 +254,29 @@
       (oid->pointer (->oid ref)))))
 
 (define (commits repo #!key initial (hide '()) (sort 'none))
-  (map (lambda (oid) (commit repo oid))
-       (let ((walker (git-revwalk-new (repository->pointer repo))))
-         ;; Sort mode, one of '(none topo time rev)
-         (git-revwalk-sorting walker sort)
-         ;; Set hidden commits. These exclude
-         ;; full branches from the traversal,
-         ;; rather than just the commits.
-         (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
-                   (map oid->pointer (map ->oid hide)))
-         ;; Set initial revision.
-         ;; Use HEAD if none is given (allowed? safe?).
-         ;; HEAD should always exist if there's at least one commit, so...
-         (git-revwalk-push walker (oid->pointer (->oid (or initial (reference repo "HEAD")))))
-         (let lp ((acc '()))
-           (condition-case
-             (lp (cons (git-revwalk-next walker) acc))
-             ((git) (git-revwalk-free walker)
-                    (map pointer->oid acc)))))))
+  (call-with-current-continuation
+    (lambda (return)
+      (map (lambda (oid) (commit repo oid))
+           (let ((walker (git-revwalk-new (repository->pointer repo))))
+             ;; Sort mode, one of '(none topo time rev)
+             (git-revwalk-sorting walker sort)
+             ;; Set hidden commits. These exclude
+             ;; full branches from the traversal,
+             ;; rather than just the commits.
+             (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
+                       (map oid->pointer (map ->oid hide)))
+             ;; Set initial revision.
+             ;; Use HEAD if none is given (allowed? safe?).
+             ;; HEAD should always exist if there's at least one commit, so...
+             (git-revwalk-push walker
+               (condition-case
+                 (oid->pointer (->oid (or initial (reference repo "HEAD"))))
+                 ((git) (return '()))))
+             (let lp ((acc '()))
+               (condition-case
+                 (lp (cons (git-revwalk-next walker) acc))
+                 ((git) (git-revwalk-free walker)
+                        (map pointer->oid acc)))))))))
 
 (define (create-commit repo #!key tree message (parents '()) author (committer author) (reference #f))
   (commit repo
@@ -312,8 +323,7 @@
 
 (define-git-record-type
   (index-entry dev oid ino mode uid gid size stage flags extended path)
-  (format "#<index-entry ~S>" (index-entry-path index-entry))
-  (git-odb-object-close))
+  (format "#<index-entry ~S>" (index-entry-path index-entry)))
 
 (define (index-open loc)
   (pointer->index
@@ -427,16 +437,20 @@
 
 (define-git-record-type
   (signature name email)
-  (format "#<signature \"~A <~A>\">" (signature-name signature) (signature-email signature))
-  (git-signature-free))
+  (format "#<signature \"~A <~A>\">" (signature-name signature) (signature-email signature)))
 
 (define (signature-time sig) (git-time-time (git-signature-time (signature->pointer sig))))
 (define (signature-time-offset sig) (git-time-offset (git-signature-time (signature->pointer sig))))
 
 (define (make-signature name email #!optional time (offset 0))
-  (pointer->signature
-    (if time (git-signature-new name email time offset)
-             (git-signature-now name email))))
+  (set-finalizer!
+    (pointer->signature
+      (if time
+        (git-signature-new name email time offset)
+        (git-signature-now name email)))
+    (lambda (sig)
+      (git-signature-free
+        (signature->pointer sig)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tags
@@ -446,17 +460,21 @@
   (format "#<tag ~S>" (tag-name tag))
   (git-tag-close))
 
-(define (tag repo name)
+(define (tag repo ref)
   (pointer->tag
     (git-tag-lookup
       (repository->pointer repo)
-      (oid->pointer
-        (reference-id
-          (reference repo name))))))
+      (oid->pointer (->oid ref)))))
 
 (define (tags repo)
-  (map (lambda (t) (tag repo t))
-       (git-tag-list (repository->pointer repo))))
+  (let lp ((tags (references repo))
+           (acc '()))
+    (if (null? tags)
+      (reverse acc)
+      (lp (cdr tags)
+          (condition-case
+            (cons (tag repo (reference-id (car tags))) acc)
+            ((git) acc))))))
 
 (define (tag-tagger tag) (pointer->signature (git-tag-tagger (tag->pointer tag))))
 (define (tag-target tag) (pointer->object (git-tag-target (tag->pointer tag))))

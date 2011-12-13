@@ -351,7 +351,7 @@
     str))
 
 (define (oid-pathfmt oid)
-  (let* ((str (make-string 40))
+  (let* ((str (make-string 41))
          (loc (make-locative str)))
     ((foreign-lambda void git_oid_pathfmt (c-pointer char) oid) loc oid)
     str))
@@ -508,7 +508,7 @@
   (let ((id (make-oid)))
     (guard-errors tag-create
       ((foreign-lambda int git_tag_create
-         oid repository c-string object signature c-string int)
+         oid repository c-string object signature c-string bool)
          id  repo       name     target tagger    msg      force))
     id))
 
