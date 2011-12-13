@@ -3,6 +3,7 @@
  (author "Evan Hanson")
  (synopsis "libgit2 bindings")
  (depends foreigners)
+ (test-depends test)
  (foreign-depends "libgit2")
  (doc-from-wiki)
  (hidden))
