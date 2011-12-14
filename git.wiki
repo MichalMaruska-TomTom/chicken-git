@@ -597,6 +597,49 @@ given {{signature}}'s respective fields.
 {{signature-time}} and {{signature-time-offset}} return the timestamp of the
 given {{signature}} and its UTC offset in minutes, respectively.
 
+==== Config
+
+<record>config</record>
+<procedure>(config? obj) => boolean</procedure>
+
+A {{config}} represents a Git configuration file, associated with either a
+repository, the current user, or the system-wide Git installation.
+
+<procedure>(config-path [type]) => string</procedure>
+
+Returns the path to a Git configuration file. {{type}} may be a symbol, either
+{{user}} or {{system}}, to request the path to the configuration for either the
+current user or the system-wide Git installation, respectively. {{type}}
+defaults to {{user}}. An error is signalled if no configuration file is found
+at the requested location.
+
+<procedure>(config-open [source]) => config</procedure>
+
+Reads the Git configuration file indicated by {{source}}, which may be a
+{{repository}}, path, or symbol as expected by {{config-path}}. An
+error is signalled if no configuration file is found at the requested location.
+
+<procedure>(config-get config name [type]) => object</procedure>
+
+Returns the value of the property {{name}} in the given {{config}} object. The
+value is returned as a string, unless an alternative return type is specified
+by the given symbol {{type}}, which should be {{string}}, {{symbol}}, or
+{{number}}. An error is signaled if the requested property doesn't exist, or if
+it cannot be converted to the specified return type.
+
+<procedure>(config-set config name value) => object</procedure>
+
+Sets the value of the property {{name}} in the given {{config}} object to the
+given {{value}}.
+
+On success, the new value is written immediately to disk.
+
+<procedure>(config-unset config name) => void</procedure>
+
+Deletes the property {{name}} from the given {{config}} object.
+
+On success, the change is written immediately to disk.
+
 === Author
 
 Evan Hanson
