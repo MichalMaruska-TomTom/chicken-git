@@ -9,7 +9,8 @@
 
 (module git-lolevel *
   (import scheme lolevel foreign foreigners
-    (except chicken repository-path))
+    (except chicken repository-path)
+    (only srfi-13 string-index))
 
 ;; Errors are composite conditions
 ;; of properties (exn git).
@@ -25,7 +26,7 @@
   (syntax-rules ()
     ((_ <loc> <exp>)
      (let ((res <exp>))
-       (if (< res 0) (git-error <loc> (lasterror)) res)))))
+       (if (< res 0) (git-error <loc> (lasterror)))))))
 
 ;; This could be compacted a bit more later, but for
 ;; right now we'll keep syntax-rules for readability.
@@ -203,8 +204,55 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; config.h
-;;
-;; TODO
+
+(define-foreign-record-type (config-file git_config_file)
+  (config cfg config-file-config)
+  ((function int (config-file)) open config-file-open)
+  ((function int (config-file c-string (pointer c-string))) get config-file-get)
+  ((function int (config-file c-string c-string)) set config-file-set)
+  ((function int (config-file (function int (c-string c-string c-pointer)) c-pointer)) foreach config-file-foreach)
+  ((function int (config-file)) free config-file-free))
+
+(define config-free (foreign-lambda void git_config_free config))
+(define/allocate config config-new (git_config_new))
+(define/allocate config config-open-global (git_config_open_global))
+(define/allocate config config-open-ondisk (git_config_open_ondisk (c-string path)))
+(define/retval config-delete (git_config_delete (config cfg) (c-string name)))
+(define/retval config-add-file (git_config_add_file (config cfg) (config-file file) (int priority)))
+(define/retval config-add-file-ondisk (git_config_add_file_ondisk (config cfg) (c-string path) (int priority)))
+
+(define-syntax define/config-path
+  (lambda (e . r)
+    `(define (,(cadr e))
+       (let ((str (make-string (foreign-value GIT_PATH_MAX int))))
+         (guard-errors ,(cadr e)
+           ((foreign-lambda int ,(caddr e) (c-pointer char)) (make-locative str)))
+         (substring str 0 (string-index str #\x00))))))
+
+(define/config-path config-find-global git_config_find_global)
+(define/config-path config-find-system git_config_find_system)
+
+(define-syntax define/config
+  (syntax-rules (getter setter)
+    ((_ getter <type> <fun> <cfun>)
+     (define (<fun> cfg name)
+       (let-location ((out <type>))
+         (guard-errors <fun>
+           ((foreign-lambda int <cfun> config (const c-string) (c-pointer <type>)) cfg name (location out)))
+         out)))
+    ((_ setter <type> <fun> <cfun>)
+     (define (<fun> cfg name val)
+       (guard-errors <fun>
+         ((foreign-lambda int <cfun> config (const c-string) <type>) cfg name val))))))
+
+(define/config getter c-string  config-get-string git_config_get_string)
+(define/config getter integer32 config-get-int32  git_config_get_int32)
+(define/config getter integer64 config-get-int64  git_config_get_int64)
+(define/config getter bool      config-get-bool   git_config_get_bool)
+(define/config setter c-string  config-set-string git_config_set_string)
+(define/config setter integer32 config-set-int32  git_config_set_int32)
+(define/config setter integer64 config-set-int64  git_config_set_int64)
+(define/config setter bool      config-set-bool   git_config_set_bool)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
