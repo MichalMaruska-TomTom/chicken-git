@@ -12,10 +12,8 @@ Assuming you have that, installation should be straightforward:
     $ cd chicken-git
     $ chicken-install
 
-Please note that the libgit library is currently a moving target, under heavy
-development. This library has been written and tested against libgit2 0.15.0.
-I'll do my best to keep things up to date, but if you're running into problems,
-check your versions.
+This library has been written and tested against Chicken 4.6 & 4.7 and
+libgit2 0.15.0. If you encounter problems, check your versions.
 
 ## API
 
@@ -37,9 +35,8 @@ Documentation is available at <http://wiki.call-cc.org/egg/git>.
 
 ## Notes
 
-Some functionality is not yet provided, mainly configuration parsing,
-custom backends and treebuilders. Obviously, patches are more than
-welcome.
+Some functionality is not yet provided, such as custom backends, treebuilders,
+and reflog inspection. Obviously, patches are more than welcome.
 
 ## Contact
 

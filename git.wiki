@@ -8,9 +8,8 @@
 
 Bindings to the [[http://libgit2.github.com|libgit2]] library.
 
-Please note that the libgit library is currently a moving target, under heavy
-development. This library has been written and tested against Chicken 4.6 & 4.7
-and libgit2 0.15.0. If you encounter problems, check your versions.
+This library has been written and tested against Chicken 4.6 & 4.7 and libgit2
+0.15.0. If you encounter problems, check your versions.
 
 The source for this egg is available at [[http://github.com/evhan/chicken-git]].
 
