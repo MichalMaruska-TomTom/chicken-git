@@ -32,8 +32,8 @@
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
-   tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type
-   tree-entry->object)
+   tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
+   config? config-open config-path config-get config-set config-unset)
   (import scheme
     (only srfi-1 iota)
     (only posix current-directory)
@@ -318,7 +318,7 @@
 
 (define-git-record-type
   (index entrycount entrycount-unmerged read write clear)
-  (format "#<index>")
+  "#<index>"
   (git-index-free))
 
 (define-git-record-type
@@ -393,12 +393,12 @@
 
 (define-git-record-type
   (odb)
-  (format "#<odb>")
+  "#<odb>"
   (git-odb-close))
 
 (define-git-record-type
   (odb-object id size type)
-  (format "#<odb-object>")
+  "#<odb-object>"
   (git-odb-object-close))
 
 (define (odb-has-object? odb obj)
@@ -548,4 +548,56 @@
              (case (tree-entry-type entry)
                ((tree) (tree->list (tree-entry->object recurse entry) recurse))
                (else entry)))))
-       (iota (tree-entrycount tree)))))
+       (iota (tree-entrycount tree))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Configs
+
+(define-git-record-type
+  (config)
+  "#<config>"
+  (git-config-free))
+
+(define (config-path #!optional (type 'user))
+  (case type
+    ((user)   (git-config-find-global))
+    ((system) (git-config-find-system))
+    (else (git-git-error 'config-open
+                         "Invalid configuration path type"
+                         type))))
+
+(define (config-open #!optional (target 'user))
+  (pointer->config
+    (cond ((string? target)
+           (git-config-open-ondisk target))
+          ((symbol? target)
+           (git-config-open-ondisk (config-path target)))
+          ((repository? target)
+           (git-config-open-ondisk
+             (make-pathname (repository-path target) "config")))
+          (else (git-git-error 'config-open
+                               "Invalid configuration source"
+                               target)))))
+
+(define (config-get config name #!optional (type 'string))
+  ((case type
+     ((boolean) git-config-get-bool)
+     ((string)  git-config-get-string)
+     ((number)  git-config-get-int64)
+     (else (git-git-error 'config-get "Invalid value type specifier" type)))
+   (config->pointer config)
+   name))
+
+(define (config-set config name value)
+  ((cond ((boolean? value) git-config-set-bool)
+         ((string? value)  git-config-set-string)
+         ((number? value)  git-config-set-int64)
+         (else (git-git-error 'config-set "Invalid value type" value)))
+   (config->pointer config)
+   name
+   value))
+
+(define (config-unset cfg name)
+  (git-config-delete (config->pointer cfg) name))
+
+)
