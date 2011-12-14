@@ -1,3 +1,11 @@
+(define *required-chicken* "4.6.0")
+
+(when (string<? (chicken-version) *required-chicken*)
+  (fprintf (current-error-port)
+           "\n  git: This extension requires Chicken version ~a or later."
+           *required-chicken*)
+  (exit 1))
+
 (compile -s -O2 -d0 -lgit2 git-lolevel.scm -J)
 (compile -s -O2 -d0 git-lolevel.import.scm)
 (compile -s -O2 -d0 -lgit2 git.scm -J)
