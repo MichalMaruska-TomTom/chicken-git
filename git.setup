@@ -13,4 +13,4 @@
 (install-extension 'git
   '("git-lolevel.so" "git-lolevel.import.so"
     "git.so" "git.import.so")
-  '((version "0.0.9")))
+  '((version "0.0.10")))

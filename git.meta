@@ -5,5 +5,4 @@
  (depends foreigners)
  (test-depends test)
  (foreign-depends "libgit2")
- (doc-from-wiki)
- (hidden))
+ (doc-from-wiki))
