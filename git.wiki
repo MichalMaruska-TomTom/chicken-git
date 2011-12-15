@@ -406,6 +406,42 @@ Returns the object type symbol, either {{tree}} or {{blob}}, of the given
 Returns an object of type {{tree}} or {{blob*}} from the given {{tree-entry}}
 and {{repository}}, which must be the owner of the {{tree-entry}}.
 
+==== Tree Builder
+
+<record>tree-builder</record>
+<procedure>(tree-builder? obj) => boolean</procedure>
+
+A tree builder provides a way to construct {{tree}} objects in memory and write
+them to a repository, without using an index as an intermediary.
+
+<procedure>(make-tree-builder [tree]) => tree-builder</procedure>
+
+Creates a new {{tree-builder}}. If a {{tree}} is given, it is used as the
+constructed tree's initial state. Otherwise, it must be populated manually
+using {{tree-builder-insert}}.
+
+<procedure>(tree-builder-insert tree-builder object path attributes) => tree-entry</procedure>
+
+Inserts {{object}} into the {{tree-builder}}'s tree at the given {{path}},
+which should be a pathname to a file relative to the repository's root. The
+inserted object must be a {{tree}} or {{blob*}}, and will have the given
+{{attributes}} (an integer file mode).
+
+<procedure>(tree-builder-ref tree-builder path) => tree-entry</procedure>
+
+Returns the {{tree-entry}} from the given {{tree-builder}} at {{path}}, which
+should be a pathname to a file relative to the repository's root. If the
+requested file doesn't exist, {{#f}} is returned.
+
+<procedure>(tree-builder-remove tree-builder path) => void</procedure>
+
+Removes the object at the given {{path}} from the {{tree-builder}}'s tree.
+
+<procedure>(tree-builder-write repo tree-builder) => tree</procedure>
+
+Writes the {{tree-builder}}'s tree to the given {{repository}}, modifying the
+on-disk repository on success. The resulting {{tree}} is returned.
+
 ==== Status
 
 <procedure>(file-status repository path) => symbol</procedure>
