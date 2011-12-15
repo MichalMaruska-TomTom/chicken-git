@@ -122,7 +122,6 @@
                     (display content)))
                 (test-assert (index-add ix file))
                 (test-assert (index-ref ix i))
-                (test-assert (index-ref ix file))
                 (let ((ie (index-ref ix file))
                       (st (file-stat file)))
                   (test #t (index-entry? ie))
@@ -145,7 +144,19 @@
       (test-error (create-tree 1 2 3 4))
       (test-error (create-tree repo))
       (let ((tr (create-tree repo ix)))
-        (test #t (tree? tr))))
+        (test #t (tree? tr)))
+      (let ((db (odb-open repo))
+            (tb (make-tree-builder)))
+        (for-each
+          (lambda (file content)
+            (let* ((bl (odb-write db (string->blob content)))
+                   (te (tree-builder-insert tb bl file 33188)))
+              (test #t (tree-entry? te))
+              (test-assert (tree-builder-get tb file))))
+          *files*
+          *content*)
+        (let ((tr (tree-builder-write repo tb)))
+          (test #t (tree? tr)))))
 
     (test-group "commit creation"
       (test-error (create-commit 1 2 3 4))
@@ -332,7 +343,7 @@
                 (test (oid->string (object-id tr))
                       (oid->string (odb-object-id obj))))
               (for-each
-                (lambda (file content i)
+                (lambda (file content)
                   (let* ((bl (tree-entry->object repo (tree-ref tr file)))
                          (id (oid->string (object-id bl)))
                          (data (string->blob content)))
@@ -346,8 +357,7 @@
                       (test (blob-size data) (odb-object-size obj))
                       (test id (oid->string (odb-object-id obj))))))
                 *files*
-                *content*
-                (iota (length *files*))))))))))
+                *content*))))))))
 
 (delete-directory *repository* 'recursively)
 (test-exit)
