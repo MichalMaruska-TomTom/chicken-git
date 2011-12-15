@@ -499,6 +499,11 @@
 (define repository-head-orphan   (foreign-lambda bool git_repository_head_orphan repository))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; remote.h
+;;
+;; TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h
 
 (define-foreign-enum-type (sort int)
@@ -535,6 +540,27 @@
 
 (define signature-dup  (foreign-lambda signature git_signature_dup signature))
 (define signature-free (foreign-lambda void git_signature_free signature))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; status.h
+
+(define-foreign-enum-type (status int)
+  (status->int int->status)
+  ((current           status/current)           GIT_STATUS_CURRENT)
+  ((index/new         status/index/new)         GIT_STATUS_INDEX_NEW)
+  ((index/modified    status/index/modified)    GIT_STATUS_INDEX_MODIFIED)
+  ((index/deleted     status/index/deleted)     GIT_STATUS_INDEX_DELETED)
+  ((worktree/new      status/worktree/new)      GIT_STATUS_WT_NEW)
+  ((worktree/modified status/worktree/modified) GIT_STATUS_WT_MODIFIED)
+  ((worktree/deleted  status/worktree/deleted)  GIT_STATUS_WT_DELETED)
+  ((ignored           status/ignored)           GIT_STATUS_IGNORED))
+
+;; NOTE if a file is of two statuses (e.g. partially-staged, so it is
+;; both index-modified and worktree-modified) this will return '().
+;; TODO fix this.
+(define/allocate status status-file (git_status_file (repository repo) (c-string path)))
+
+;; Maybe TODO foreach.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tag.h

@@ -33,7 +33,8 @@
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
-   config? config-open config-path config-get config-set config-unset)
+   config? config-open config-path config-get config-set config-unset
+   file-status)
   (import scheme
     (only srfi-1 iota)
     (only extras format)
@@ -401,6 +402,12 @@
 
 (define (index-entry-mtime entry)
   (git-index-time-seconds (git-index-entry-mtime (index-entry->pointer entry))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Status
+
+(define (file-status repo path)
+  (git-status-file (repository->pointer repo) path))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ODB
