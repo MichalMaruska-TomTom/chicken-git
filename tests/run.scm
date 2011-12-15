@@ -189,7 +189,7 @@
           (let ((ref (create-reference repo
                                target: ref
                                  name: "TAIL"
-                            symbolic?: 'yes)))
+                             symbolic: 'yes)))
             (test #t (reference? ref))
             (test 'symbolic (reference-type ref))))
         (test 2 (length (references repo))))

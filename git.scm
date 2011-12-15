@@ -217,15 +217,15 @@
 ;; This will overwrite existing references.
 ;; There should probably be a flag or something
 ;; to disable this. TODO, maybe.
-(define (create-reference repo #!key name target symbolic? force?)
+(define (create-reference repo #!key name target symbolic force)
   (let ((repo* (repository->pointer repo)))
     (pointer->reference
-      (if (not symbolic?)
+      (if (not symbolic)
         ;; Direct references are created by OID.
-        (git-reference-create-oid repo* name (oid->pointer (->oid target)) force?)
+        (git-reference-create-oid repo* name (oid->pointer (->oid target)) force)
         ;; Symbolic references require the
         ;; target to be given by a string.
-        (git-reference-create-symbolic repo* name (->reference-name target) force?)))))
+        (git-reference-create-symbolic repo* name (->reference-name target) force)))))
 
 (define (reference-target-set ref target)
   (let ((ref* (reference->pointer ref)))

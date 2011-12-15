@@ -161,14 +161,14 @@ vice-versa.
 
 On success, the on-disk repository is updated immediately.
 
-<procedure>(create-reference repository #!key name target [symbolic?] [force?]) => reference</procedure>
+<procedure>(create-reference repository #!key name target [symbolic] [force]) => reference</procedure>
 
 Creates & returns a new reference in the given {{repository}} for the specified
-{{name}} and {{target}}. If {{symbolic?}} is given and not {{#f}}, the created
+{{name}} and {{target}}. If {{symbolic}} is given and not {{#f}}, the created
 reference will be so, and {{target}} must be a reference name or {{reference}}.
 Otherwise, {{target}} must be a SHA1 string, {{oid}}, {{commit}} or
 {{reference}} to a {{commit}}. If a reference of the given {{name}} exists and
-{{force?}} is not given or {{#f}}, an error is signalled. Otherwise, creation
+{{force}} is not given or {{#f}}, an error is signalled. Otherwise, creation
 is forced and the old reference will be overwritten.
 
 On success, the on-disk repository is updated immediately.
@@ -327,12 +327,12 @@ Destroys the given {{tag}}.
 
 On success, the on-disk repository is updated immediately.
 
-<procedure>(create-tag repository #!key target name message tagger [force?]) => tag</procedure>
+<procedure>(create-tag repository #!key target name message tagger [force]) => tag</procedure>
 
 Creates & returns a new tag in the given {{repository}} for the specified
 {{name}}, {{message}} and {{target}}. {{name}} and {{message}} must be strings,
 {{tagger}} must be a {{signature}},and {{target}} must be a {{commit}},
-{{tree}} or {{blob*}}. If a tag of the given {{name}} exists and {{force?}} is
+{{tree}} or {{blob*}}. If a tag of the given {{name}} exists and {{force}} is
 not given or {{#f}}, an error is signalled.  Otherwise, creation is forced and
 the old tag will be overwritten.
 
