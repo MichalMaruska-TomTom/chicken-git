@@ -111,6 +111,7 @@
 (define-foreign-type tag            (c-pointer "git_tag"))
 (define-foreign-type tree           (c-pointer "git_tree"))
 (define-foreign-type tree-entry     (c-pointer "git_tree_entry"))
+(define-foreign-type tree-builder   (c-pointer "git_treebuilder"))
 
 (define-foreign-enum-type (otype int)
   (otype->int int->otype)
@@ -622,6 +623,27 @@
   (let ((id (make-oid)))
     (guard-errors tree-create-fromindex
       ((foreign-lambda int git_tree_create_fromindex oid index) id ix))
-    id)))
+    id))
 
-;; TODO treebuilders
+(define/allocate tree-builder tree-builder-create
+  (git_treebuilder_create (tree source)))
+
+(define tree-builder-free  (foreign-lambda void git_treebuilder_free tree-builder))
+(define tree-builder-clear (foreign-lambda void git_treebuilder_clear tree-builder))
+(define tree-builder-get   (foreign-lambda tree-entry git_treebuilder_get tree-builder c-string))
+
+(define/allocate tree-entry tree-builder-insert
+  (git_treebuilder_insert (tree-builder tb) (c-string path) (oid id) (unsigned-int attributes)))
+
+(define/retval tree-builder-remove
+  (git_treebuilder_remote (tree-builder tb) (c-string path)))
+
+(define (tree-builder-write tb repo)
+  (let ((id (make-oid)))
+    (guard-errors tree-builder-write
+      ((foreign-lambda int git_treebuilder_write oid repository tree-builder) id repo tb))
+    id))
+
+;; TODO tree-builder-filter
+
+)
