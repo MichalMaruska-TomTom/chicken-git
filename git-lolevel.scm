@@ -636,7 +636,7 @@
   (git_treebuilder_insert (tree-builder tb) (c-string path) (oid id) (unsigned-int attributes)))
 
 (define/retval tree-builder-remove
-  (git_treebuilder_remote (tree-builder tb) (c-string path)))
+  (git_treebuilder_remove (tree-builder tb) (c-string path)))
 
 (define (tree-builder-write tb repo)
   (let ((id (make-oid)))
