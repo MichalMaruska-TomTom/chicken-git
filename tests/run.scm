@@ -147,6 +147,8 @@
         (test #t (tree? tr)))
       (let ((db (odb-open repo))
             (tb (make-tree-builder)))
+        (test #f (tree-builder-ref tb "not-a-file"))
+        (test-error (tree-builder-remove tb "not-a-file"))
         (for-each
           (lambda (file content)
             (let* ((bl (odb-write db (string->blob content)))
