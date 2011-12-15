@@ -64,13 +64,12 @@ Returns the absolute path to the given {{repository}}. A {{type}} symbol may be
 given in order to retrieve alternate paths for the repository, and should be
 one of {{path}} (the default), {{index}}, {{odb}} or {{workdir}}.
 
-<procedure>(repository-ref repository ref [type]) => object</procedure>
+<procedure>(repository-ref repository ref) => object</procedure>
 
 Looks up a Git object in the given {{repository}}. {{ref}} may be a SHA1 string,
 {{oid}}, {{reference}}, {{blob*}}, {{commit}}, {{tag}} or {{tree}}. The returned
 object will be of type {{blob*}}, {{commit}}, {{tag}} or {{tree}}, or {{#f}} if
-no object matching the given {{ref}} is found. An optional {{type}} symbol may
-be given in order to enforce an object type for which to search.
+no object matching the given {{ref}} is found.
 
 <procedure>(repository-empty? repository) => boolean</procedure>
 <procedure>(repository-bare? repositoy) => boolean</procedure>

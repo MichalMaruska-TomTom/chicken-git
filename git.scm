@@ -36,12 +36,13 @@
    config? config-open config-path config-get config-set config-unset)
   (import scheme
     (only srfi-1 iota)
+    (only extras format)
     (only posix current-directory)
     (only files normalize-pathname make-pathname)
     (except chicken repository-path)
     (prefix git-lolevel git-)
     (only lolevel record->vector record-instance-type number-of-bytes move-memory!))
-  (require-library srfi-1 files lolevel git-lolevel)
+  (require-library srfi-1 extras posix files lolevel git-lolevel)
 
 (define-for-syntax (s+ . args)
   (string->symbol (apply string-append (map symbol->string args))))
@@ -156,14 +157,27 @@
 (define (repository-path repo #!optional (type 'path))
   (git-repository-path (repository->pointer repo) type))
 
-(define (repository-ref repo ref #!optional (type 'any))
-  (condition-case
-    (pointer->object
-      (git-object-lookup
-        (repository->pointer repo)
-        (oid->pointer (->oid ref))
-        type))
-    ((git) #f)))
+(define (repository-ref repo ref)
+  (call-with-current-continuation
+    (lambda (return)
+      (for-each
+        (lambda (try)
+          (condition-case
+            (return (try repo ref))
+            ((git) 'continue)))
+        (list commit blob* tag tree (lambda _ #f))))))
+
+  ;; git-object-lookup fails on 32-bit bindings.
+  ;; TODO figure out why so we can use libgit2's
+  ;; polymorphic lookup (which will be faster than
+  ;; the hand-rolled hack above).
+  ; (condition-case
+  ;   (pointer->object
+  ;     (git-object-lookup
+  ;       (repository->pointer repo)
+  ;       (oid->pointer (->oid ref))
+  ;       type))
+  ;   ((git) #f)))
 
 (define (create-repository #!optional (path (current-directory)) bare?)
   (pointer->repository (git-repository-init path bare?)))
@@ -484,7 +498,7 @@
     (tag-name tag)))
 
 (define (create-tag repo #!key target name message tagger force)
-  (repository-ref repo
+  (tag repo
     (pointer->oid
       (git-tag-create
         (repository->pointer repo)
