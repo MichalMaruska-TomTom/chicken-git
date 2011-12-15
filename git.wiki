@@ -406,6 +406,28 @@ Returns the object type symbol, either {{tree}} or {{blob}}, of the given
 Returns an object of type {{tree}} or {{blob*}} from the given {{tree-entry}}
 and {{repository}}, which must be the owner of the {{tree-entry}}.
 
+==== Status
+
+<procedure>(file-status repository path) => symbol</procedure>
+
+Returns the status of the file specified by {{path}} in the given
+{{repository}}.
+
+This status will be one of the following symbols:
+
+    current
+    index/new
+    index/modified
+    index/deleted
+    worktree/new
+    worktree/modified
+    worktree/deleted
+    ignored
+
+Currently, if a file is of two statuses (for example, partially-staged, so it
+is both {{index/modified}} and {{worktree-modified}}) this function will return
+the empty list.
+
 ==== Index
 
 <record>index</record>
