@@ -33,7 +33,7 @@
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
-   make-tree-builder tree-builder-get tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
+   make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    config? config-open config-path config-get config-set config-unset
    file-status)
   (import scheme
@@ -585,7 +585,7 @@
     (git-tree-builder-create
       (or (and tree (tree->pointer tree))))))
 
-(define (tree-builder-get tb path)    (git-tree-builder-get (tree-builder->pointer tb) path))
+(define (tree-builder-ref tb path)    (git-tree-builder-get (tree-builder->pointer tb) path))
 (define (tree-builder-remove tb path) (git-tree-builder-remove (tree-builder->pointer tb) path))
 
 (define (tree-builder-insert builder obj path attributes)

@@ -152,7 +152,7 @@
             (let* ((bl (odb-write db (string->blob content)))
                    (te (tree-builder-insert tb bl file 33188)))
               (test #t (tree-entry? te))
-              (test-assert (tree-builder-get tb file))))
+              (test-assert (tree-builder-ref tb file))))
           *files*
           *content*)
         (let ((tr (tree-builder-write repo tb)))
