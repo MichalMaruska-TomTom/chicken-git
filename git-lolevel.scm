@@ -227,7 +227,7 @@
     `(define (,(cadr e))
        (let ((str (make-string (foreign-value GIT_PATH_MAX int))))
          (guard-errors ,(cadr e)
-           ((foreign-lambda int ,(caddr e) (c-pointer char)) (make-locative str)))
+           ((foreign-lambda int ,(caddr e) scheme-pointer) str))
          (substring str 0 (string-index str #\x00))))))
 
 (define/config-path config-find-global git_config_find_global)
@@ -362,16 +362,16 @@
   (let ((id (make-oid)))
     (guard-errors odb-write
       ((foreign-lambda int git_odb_write
-         oid odb c-pointer            size_t otype)
-         id  db  (make-locative data) len    type))
+         oid odb scheme-pointer size_t otype)
+         id  db  data           len    type))
     id))
 
 (define (odb-hash data len type)
   (let ((id (make-oid)))
     (guard-errors odb-hash
       ((foreign-lambda int git_odb_hash
-         oid c-pointer            size_t otype)
-         id  (make-locative data) len    type))
+         oid scheme-pointer  size_t otype)
+         id  data            len    type))
     id))
 
 (define odb-object-close (foreign-lambda void git_odb_object_close odb-object))
@@ -395,25 +395,22 @@
     id))
 
 (define (oid-fmt oid)
-  (let* ((str (make-string 40))
-         (loc (make-locative str)))
-    ((foreign-lambda void git_oid_fmt (c-pointer char) oid) loc oid)
+  (let* ((str (make-string 40)))
+    ((foreign-lambda void git_oid_fmt scheme-pointer oid) str oid)
     str))
 
 (define (oid-pathfmt oid)
-  (let* ((str (make-string 41))
-         (loc (make-locative str)))
-    ((foreign-lambda void git_oid_pathfmt (c-pointer char) oid) loc oid)
+  (let* ((str (make-string 41)))
+    ((foreign-lambda void git_oid_pathfmt scheme-pointer oid) str oid)
     str))
 
 (define oid-allocfmt     (foreign-lambda c-string git_oid_allocfmt oid))
 
 (define (oid-to-string n id)
-  (let* ((str (make-string (max n 1)))
-         (loc (make-locative str)))
+  (let* ((str (make-string (max n 1))))
     ((foreign-lambda c-string git_oid_to_string
-       (c-pointer char) size_t  oid)
-       loc              (+ n 1) id)))
+       scheme-pointer size_t  oid)
+       str            (+ n 1) id)))
 
 (define oid-cpy          (foreign-lambda void git_oid_cpy oid oid))
 (define oid-cmp          (foreign-lambda int git_oid_cmp oid oid))
