@@ -558,6 +558,14 @@
 ;; TODO fix this.
 (define/allocate status status-file (git_status_file (repository repo) (c-string path)))
 
+(define (status-should-ignore repo path)
+  (let-location ((ignore int))
+    (guard-errors status-should-ignore
+      ((foreign-lambda int git_status_should_ignore
+         repository c-string (c-pointer int))
+         repo       path     (location ignore)))
+    (not (zero? ignore))))
+
 ;; Maybe TODO foreach.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

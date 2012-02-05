@@ -140,6 +140,13 @@
         (test (length *files*) (index-entrycount ix))
         (test (length *files*) (length (index->list ix)))))
 
+      (test-group "status"
+        (test-error (file-status 11))
+        (test-error (file-status "not-a-file"))
+        ;; Good enough for now...
+        (test 'index/new (file-status repo (car *files*)))
+        (test #f (file-ignored? repo (car *files*))))
+
     (test-group "tree creation"
       (test-error (create-tree 1 2 3 4))
       (test-error (create-tree repo))

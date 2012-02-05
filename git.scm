@@ -34,7 +34,7 @@
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    config? config-open config-path config-get config-set config-unset
-   file-status)
+   file-status file-ignored?)
   (import scheme
     (only srfi-1 iota)
     (only extras format)
@@ -411,6 +411,9 @@
 
 (define (file-status repo path)
   (git-status-file (repository->pointer repo) path))
+
+(define (file-ignored? repo path)
+  (git-status-should-ignore (repository->pointer repo) path))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ODB
