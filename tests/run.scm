@@ -18,9 +18,9 @@
     "All mimsy were the borogoves,"
     "And the mome raths outgrabe."))
 (define *config*
-  '("[core]"
-    "repositoryformatversion = 0"
-    "filemode = true"))
+  '(("core.filemode" . #t)
+    ("core.repositoryformatversion" . 0)
+    ("branch.master.remote" . "origin")))
 
 (test-group "git"
 
@@ -71,16 +71,17 @@
 
     (test-group "config"
       (test-error (config-open 9))
-      (test-error (config-open "not-a-config"))
-      (test-error (config-open repo))
-      (let ((path (make-pathname *repository* ".git/config")))
-        (with-output-to-file path
-          (lambda () (for-each write-line *config*)))
-        (test #t  (config? (config-open path)))
-        (test #t  (config? (config-open repo))))
+      (test-error (config-open 'not-a-config))
+      (test #t (config? (config-open "now-a-config")))
       (let ((cfg (config-open repo)))
-        (test-error  (config-get cfg "not-a-value"))
-        (test-error  (config-get cfg "core.not-a-value"))
+        (test #t (config? (config-open repo)))
+        (test-error (config-get cfg "not-a-value"))
+        (test-error (config-get cfg "core.not-a-value"))
+        (for-each
+          (lambda (name value)
+            (test-assert (config-set cfg name value)))
+          (map car *config*)
+          (map cdr *config*))
         (test "true" (config-get cfg "core.filemode"))
         (test "true" (config-get cfg "core.filemode" 'string))
         (test #t     (config-get cfg "core.filemode" 'boolean))
@@ -89,19 +90,12 @@
         (test "0"    (config-get cfg "core.repositoryformatversion" 'string))
         (test 0      (config-get cfg "core.repositoryformatversion" 'number))
         (test #f     (config-get cfg "core.repositoryformatversion" 'boolean))
-        (test-assert (config-set cfg "diff.external" "/an/awesome/path"))
-        (test "/an/awesome/path" (config-get cfg "diff.external"))
-        (test "/an/awesome/path" (config-get cfg "diff.external" 'string))
-        (test-error  (config-get cfg "diff.external" 'number))
-        (test-error  (config-get cfg "diff.external" 'boolean))
-        (test-assert (config-unset cfg "diff.external"))
-        ;; XXX there is an inconsistency here: libgit2 returns
-        ;; #f for deleted values rather than an error until the
-        ;; configuration object is freed. After recreating the
-        ;; object, it reports an error as expected:
-        (test #f (config-get cfg "diff.external"))
-        (let ((cfg* (config-open repo)))
-          (test-error (config-get cfg* "diff.external")))))
+        (test "origin" (config-get cfg "branch.master.remote"))
+        (test "origin" (config-get cfg "branch.master.remote" 'string))
+        (test-error  (config-get cfg "branch.master.remote" 'number))
+        (test-error  (config-get cfg "branch.master.remote" 'boolean))
+        (test-assert (config-unset cfg "branch.master.remote"))
+        (test-error  (config-get cfg "branch.master.remote"))))
 
     (let ((ix (index-open repo)))
 
