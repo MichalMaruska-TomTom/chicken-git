@@ -432,7 +432,7 @@
 (define (odb-open loc)
   (pointer->odb
     (cond ((string? loc) (git-odb-open loc))
-          ((repository? loc) (git-odb-open (repository-path loc 'odb)))
+          ((repository? loc) (git-repository-odb (repository->pointer loc)))
           (else (git-git-error 'odb-open
                                "Invalid odb location"
                                loc)))))
@@ -628,8 +628,8 @@
           ((symbol? target)
            (git-config-open-ondisk (config-path target)))
           ((repository? target)
-           (git-config-open-ondisk
-             (make-pathname (repository-path target) "config")))
+           (git-repository-config
+             (repository->pointer target)))
           (else (git-git-error 'config-open
                                "Invalid configuration source"
                                target)))))

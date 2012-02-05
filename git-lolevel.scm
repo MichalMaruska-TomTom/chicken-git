@@ -477,8 +477,14 @@
 (define/allocate index repository-index
   (git_repository_index (repository repo)))
 
+(define/allocate odb repository-odb
+  (git_repository_odb (repository repo)))
+
 (define/allocate reference repository-head
   (git_repository_head (repository repo)))
+
+(define/allocate config repository-config
+  (git_repository_config (repository repo)))
 
 (define repository-database (foreign-lambda odb git_repository_database repository))
 (define repository-free     (foreign-lambda void git_repository_free repository))
