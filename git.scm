@@ -138,7 +138,7 @@
 ;; Repositories
 
 (define-git-record-type
-  (repository is-empty is-bare)
+  (repository is-empty is-bare workdir)
   (format "#<repository ~S>" (repository-path repository))
   (git-repository-free))
 
@@ -156,7 +156,10 @@
         ((git) (git-repository-open path))))))
 
 (define (repository-path repo #!optional (type 'path))
-  (git-repository-path (repository->pointer repo) type))
+  (case type
+    ((path) (git-repository-path (repository->pointer repo)))
+    ((workdir) (git-repository-workdir (repository->pointer repo)))
+    (else (git-git-error 'repository-path "Invalid path type specifier" type))))
 
 (define (repository-ref repo ref)
   (call-with-current-continuation

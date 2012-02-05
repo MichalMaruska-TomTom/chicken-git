@@ -468,13 +468,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
 
-(define-foreign-enum-type (path int)
-  (path->int int->path)
-  ((path path/path) GIT_REPO_PATH)
-  ((index path/index) GIT_REPO_PATH_INDEX)
-  ((odb path/odb) GIT_REPO_PATH_ODB)
-  ((workdir path/workdir) GIT_REPO_PATH_WORKDIR))
-
 (define/allocate repository repository-open
   (git_repository_open (c-string path)))
 
@@ -491,7 +484,8 @@
 (define repository-free     (foreign-lambda void git_repository_free repository))
 (define repository-is-empty (foreign-lambda bool git_repository_is_empty repository))
 (define repository-is-bare  (foreign-lambda bool git_repository_is_bare repository))
-(define repository-path     (foreign-lambda c-string git_repository_path repository path))
+(define repository-path     (foreign-lambda c-string git_repository_path repository))
+(define repository-workdir  (foreign-lambda c-string git_repository_workdir repository))
 
 (define repository-head-detached (foreign-lambda bool git_repository_head_detached repository))
 (define repository-head-orphan   (foreign-lambda bool git_repository_head_orphan repository))
