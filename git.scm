@@ -254,7 +254,7 @@
 (define-git-record-type
   (commit id message message-encoding time time-offset parentcount)
   (format "#<commit ~S>" (oid->string (->oid commit) 7))
-  (git-commit-close))
+  (git-commit-free))
 
 (define (commit-tree cmt)      (pointer->tree (git-commit-tree (commit->pointer cmt))))
 (define (commit-author cmt)    (pointer->signature (git-commit-author (commit->pointer cmt))))
@@ -311,7 +311,7 @@
 (define-git-record-type
   (blob* rawsize rawcontent)
   (format "#<blob* ~S>" (oid->string (->oid blob*) 7))
-  (git-blob*-close))
+  (git-blob*-free))
 
 (define blob*-size blob*-rawsize)
 (define (blob*-content blob*)
@@ -415,12 +415,12 @@
 (define-git-record-type
   (odb)
   "#<odb>"
-  (git-odb-close))
+  (git-odb-free))
 
 (define-git-record-type
   (odb-object id size type)
   "#<odb-object>"
-  (git-odb-object-close))
+  (git-odb-object-free))
 
 (define (odb-has-object? odb obj)
   (git-odb-exists (odb->pointer odb)
@@ -479,7 +479,7 @@
 (define-git-record-type
   (tag id type name message)
   (format "#<tag ~S>" (tag-name tag))
-  (git-tag-close))
+  (git-tag-free))
 
 (define (tag repo ref)
   (pointer->tag
@@ -521,7 +521,7 @@
 (define-git-record-type
   (tree id entrycount)
   (format "#<tree ~S>" (oid->string (->oid tree) 7))
-  (git-tree-close))
+  (git-tree-free))
 
 (define-git-record-type
   (tree-entry id name attributes type)

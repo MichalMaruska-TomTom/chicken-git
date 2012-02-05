@@ -135,7 +135,7 @@
 (define/allocate blob* blob*-lookup-prefix
   (git_blob_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
-(define blob*-close             (foreign-lambda void git_blob_close blob*))
+(define blob*-free              (foreign-lambda void git_blob_free blob*))
 (define blob*-rawcontent        (foreign-lambda c-pointer git_blob_rawcontent blob*))
 (define blob*-rawsize           (foreign-lambda size_t git_blob_rawsize blob*))
 (define blob*-create-fromfile   (foreign-lambda int git_blob_create_fromfile oid repository c-string))
@@ -150,7 +150,7 @@
 (define/allocate commit commit-lookup-prefix
   (git_commit_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
-(define commit-close            (foreign-lambda void git_commit_close commit))
+(define commit-free             (foreign-lambda void git_commit_free commit))
 (define commit-id               (foreign-lambda oid git_commit_id commit))
 (define commit-message          (foreign-lambda c-string git_commit_message commit))
 (define commit-message-encoding (foreign-lambda c-string git_commit_message_encoding commit))
@@ -325,7 +325,7 @@
   (git_object_lookup (repository repo) (oid id) (otype type)))
 
 (define object-id          (foreign-lambda oid git_object_id object))
-(define object-close       (foreign-lambda void git_object_close object))
+(define object-free        (foreign-lambda void git_object_free object))
 (define object-owner       (foreign-lambda repository git_object_owner object))
 (define object-type        (foreign-lambda otype git_object_type object))
 (define object-type2string (foreign-lambda otype git_object_type2string otype))
@@ -349,7 +349,7 @@
 (define/allocate odb odb-new  (git_odb_new))
 (define/allocate odb odb-open (git_odb_open (c-string dir)))
 
-(define odb-close (foreign-lambda void git_odb_close odb))
+(define odb-free (foreign-lambda void git_odb_free odb))
 (define odb-exists (foreign-lambda bool git_odb_exists odb oid))
 
 (define/allocate odb-object odb-read
@@ -374,7 +374,7 @@
          id  data            len    type))
     id))
 
-(define odb-object-close (foreign-lambda void git_odb_object_close odb-object))
+(define odb-object-free  (foreign-lambda void git_odb_object_free odb-object))
 (define odb-object-id    (foreign-lambda oid git_odb_object_id odb-object))
 (define odb-object-data  (foreign-lambda c-pointer git_odb_object_data odb-object))
 (define odb-object-size  (foreign-lambda size_t git_odb_object_size odb-object))
@@ -569,7 +569,7 @@
 (define/allocate object tag-target
   (git_tag_target (tag t)))
 
-(define tag-close      (foreign-lambda void git_tag_close tag))
+(define tag-free       (foreign-lambda void git_tag_free tag))
 (define tag-id         (foreign-lambda oid git_tag_id tag))
 (define tag-target-oid (foreign-lambda oid git_tag_target_oid tag))
 (define tag-type       (foreign-lambda otype git_tag_type tag))
@@ -603,7 +603,7 @@
 (define/allocate tree tree-lookup-prefix
   (git_tree_lookup_prefix (repository repo) (oid id) (unsigned-int len)))
 
-(define tree-close            (foreign-lambda void git_tree_close tree))
+(define tree-free             (foreign-lambda void git_tree_free tree))
 (define tree-id               (foreign-lambda oid git_tree_id tree))
 (define tree-entrycount       (foreign-lambda unsigned-int git_tree_entrycount tree))
 (define tree-entry-byname     (foreign-lambda tree-entry git_tree_entry_byname tree c-string))
