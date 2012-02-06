@@ -33,6 +33,7 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
+   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-oid tree-diff-new-oid tree-diff-path tree-diff-status
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -607,6 +608,37 @@
       (git-tree-builder-write
         (tree-builder->pointer tb)
         (repository->pointer repo)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tree Diffs
+
+;; TODO Debug, figure out why this
+;; type won't work like the others.
+(define-record tree-diff old-oid new-oid old-attr new-attr status path)
+(define-record-printer (tree-diff _ out)
+  (display "#<tree-diff>" out))
+
+(define (tree-diff tree1 tree2)
+  (let ((acc '()))
+    (git-tree-diff
+      (tree->pointer tree1)
+      (tree->pointer tree2)
+      (lambda (diff)
+        ;; We build and set! a record here in the thunk
+        ;; because something isn't working correctly with
+        ;; this callback when using a macro-generated record
+        ;; type (i.e. defined by define-git-record-type).
+        ;; TODO Find out why and fix it.
+        (set! acc
+          (cons (make-tree-diff
+                  (pointer->oid (git-tree-diff-old-oid diff))
+                  (pointer->oid (git-tree-diff-new-oid diff))
+                  (git-tree-diff-old-attr diff)
+                  (git-tree-diff-new-attr diff)
+                  (git-tree-diff-status diff)
+                  (git-tree-diff-path diff))
+                acc))))
+    acc))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs

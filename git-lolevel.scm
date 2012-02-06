@@ -605,6 +605,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tree.h
 
+(define-foreign-enum-type (diff int)
+  (diff->int int->diff)
+  ((added    diff/added)    GIT_STATUS_ADDED)
+  ((deleted  diff/deleted)  GIT_STATUS_DELETED)
+  ((modified diff/modified) GIT_STATUS_MODIFIED))
+
+(define-foreign-record-type (tree-diff-data git_tree_diff_data)
+  (unsigned-int old_attr tree-diff-old-attr)
+  (unsigned-int new_attr tree-diff-new-attr)
+  ((struct oid) old_oid  tree-diff-old-oid)
+  ((struct oid) new_oid  tree-diff-new-oid)
+  (diff         status   tree-diff-status)
+  (c-string     path     tree-diff-path))
+
 (define/allocate tree tree-lookup
   (git_tree_lookup (repository repo) (oid id)))
 
@@ -630,6 +644,15 @@
       ((foreign-lambda int git_tree_create_fromindex oid index) id ix))
     id))
 
+(define-external (tree_diff_callback (tree-diff-data diff) (scheme-object fn)) int
+  (fn diff))
+
+(define (tree-diff old new acc)
+  (guard-errors tree-diff
+    ((foreign-safe-lambda int git_tree_diff
+       tree tree (function int (tree-diff-data scheme-object)) scheme-object)
+       old  new  (location tree_diff_callback)                 acc)))
+
 (define/allocate tree-builder tree-builder-create
   (git_treebuilder_create (tree source)))
 
@@ -649,6 +672,6 @@
       ((foreign-lambda int git_treebuilder_write oid repository tree-builder) id repo tb))
     id))
 
-;; TODO tree-builder-filter
+;; Maybe TODO tree-builder-filter tree-walk
 
 )
