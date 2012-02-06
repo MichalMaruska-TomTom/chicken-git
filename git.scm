@@ -191,7 +191,7 @@
 ;; References
 
 (define-git-record-type
-  (reference oid type name delete)
+  (reference oid type name delete reload is-packed)
   (format "#<reference ~S>" (reference-name reference)))
 
 ;; Follow symbolic references to get an OID.
@@ -201,6 +201,8 @@
 ;; behavior for now...
 (define (reference-id ref)      (pointer->oid (reference-oid (reference-resolve ref))))
 (define (reference-resolve ref) (pointer->reference (git-reference-resolve (reference->pointer ref))))
+
+(define reference-is-packed? reference-is-packed)
 
 (define (pack-references repo) (git-reference-packall (repository->pointer repo)))
 

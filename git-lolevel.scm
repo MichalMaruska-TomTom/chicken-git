@@ -448,12 +448,15 @@
 (define reference-name   (foreign-lambda c-string git_reference_name reference))
 (define reference-owner  (foreign-lambda repository git_reference_owner reference))
 
+(define reference-is-packed (foreign-lambda bool git_reference_is_packed reference))
+
 (define/allocate reference reference-resolve (git_reference_resolve (reference ref)))
 
 (define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
 (define/retval reference-set-oid    (git_reference_set_oid (reference ref) (oid id)))
 (define/retval reference-rename     (git_reference_rename (reference ref) (c-string name) (bool force)))
 (define/retval reference-delete     (git_reference_delete (reference ref)))
+(define/retval reference-reload     (git_reference_reload (reference ref)))
 (define/retval reference-packall    (git_reference_packall (repository repo)))
 
 (define (reference-listall repo flags)
