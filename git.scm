@@ -30,7 +30,7 @@
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
-   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
+   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-oid tree-diff-new-oid tree-diff-path tree-diff-status
@@ -541,6 +541,9 @@
     (git-tree-lookup
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
+
+(define (tree-subtree tree path)
+  (pointer->tree (git-tree-get-subtree (tree->pointer tree) path)))
 
 (define (tree-ref tree key)
   (pointer->tree-entry

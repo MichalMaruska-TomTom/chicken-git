@@ -422,6 +422,11 @@
   (git_oid_shorten_add (oid-shorten osh) ((const c-string) oid)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reflog.h
+;;
+;; TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; refs.h
 
 (define-foreign-enum-type (rtype int)
@@ -637,6 +642,9 @@
 (define tree-entry-name       (foreign-lambda c-string git_tree_entry_name tree-entry))
 (define tree-entry-id         (foreign-lambda oid git_tree_entry_id tree-entry))
 (define tree-entry-type       (foreign-lambda otype git_tree_entry_type tree-entry))
+
+(define/allocate tree tree-get-subtree
+  (git_tree_get_subtree (tree tr) ((const c-string) path)))
 
 (define/allocate object tree-entry-2object
   (git_tree_entry_2object (repository repo) (tree-entry entry)))
