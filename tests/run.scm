@@ -4,7 +4,7 @@
 (define *sha1* "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 (define *sha1-path* "aa/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 (define *time*
-  '("Mon Dec 12 15:10:35 2011" . 2))
+  '(1323702635 . 2))
 (define *messages*
   '("slain the Jabberwock"
     "tagged the Jabberwock slain"))
@@ -36,7 +36,7 @@
     (test-error (make-signature 42))
     (test-error (make-signature 'snicker 'snack))
     (test-error (make-signature "not" "a" "real" "time"))
-    (let* ((then (utc-time->seconds (string->time (car *time*))))
+    (let* ((then (car *time*))
            (sig (make-signature (car *signature*) (cdr *signature*) then (cdr *time*))))
       (test #t (signature? sig))
       (test then (signature-time sig))
@@ -274,8 +274,6 @@
           (test-group "tree creation"
             (test-error (create-tree 1 2 3 4))
             (test-error (create-tree repo))
-            (let ((tr (create-tree repo ix)))
-              (test #t (tree? tr)))
             (let ((db (odb-open repo))
                   (tb (make-tree-builder)))
               (test #f (tree-builder-ref tb "not-a-file"))
@@ -288,17 +286,23 @@
                     (test-assert (tree-builder-ref tb file))))
                 (drop *files* 1)
                 (drop *content* 1))
-              (let ((tr (tree-builder-write repo tb)))
-                (test #t (tree? tr))
-                (test-group "tree diffs"
-                  (test-error (tree-diff 'garbage))
-                  (let ((t1 (commit-tree cmt)))
-                    (test-assert (tree-diff tr t1))
-                    (let ((diff (tree-diff tr t1)))
+              (let ((t1 (tree-builder-write repo tb)))
+                (test #t (tree? t1))
+                (let ((t2 (create-tree repo ix)))
+                  (test #t (tree? t2))
+                  (test-group "tree diffs"
+                    (test-error (tree-diff 'garbage))
+                    (test-assert (tree-diff t1 t2))
+                    (let ((diff (tree-diff t1 t2)))
                       (test #t (list? diff))
                       (test 1 (length diff))
-                      (test 'added (tree-diff-status (car diff)))
-                      (test (car *files*) (tree-diff-path (car diff)))))))))
+                      (let ((diff (car diff)))
+                        (test #t (oid? (tree-diff-old-oid diff)))
+                        (test #t (oid? (tree-diff-new-oid diff)))
+                        (test 0 (tree-diff-old-attr diff))
+                        (test 33188 (tree-diff-new-attr diff))
+                        (test 'added (tree-diff-status diff))
+                        (test (car *files*) (tree-diff-path diff)))))))))
 
         (test-group "tree"
           (test-error (tree repo 0))
