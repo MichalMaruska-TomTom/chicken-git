@@ -463,6 +463,7 @@
 (define/allocate reference reference-create-oid
   (git_reference_create_oid (repository repo) (c-string name) (oid id) (bool force)))
 
+(define reference-free   (foreign-lambda void git_reference_free reference))
 (define reference-oid    (foreign-lambda oid git_reference_oid reference))
 (define reference-target (foreign-lambda c-string git_reference_target reference))
 (define reference-type   (foreign-lambda rtype git_reference_type reference))
@@ -510,7 +511,6 @@
 (define/allocate config repository-config
   (git_repository_config (repository repo)))
 
-(define repository-database (foreign-lambda odb git_repository_database repository))
 (define repository-free     (foreign-lambda void git_repository_free repository))
 (define repository-is-empty (foreign-lambda bool git_repository_is_empty repository))
 (define repository-is-bare  (foreign-lambda bool git_repository_is_bare repository))
