@@ -70,8 +70,14 @@
   ((struct time) when signature-time))
 
 (define-foreign-record-type (oid git_oid)
-  (constructor: make-oid)
+  (constructor: %make-oid)
+  (destructor: oid-free)
   (unsigned-char (id (foreign-value GIT_OID_RAWSZ int)) oid-id))
+
+(define (make-oid)
+  (set-finalizer! (%make-oid)
+    (lambda (oid)
+      (oid-free oid))))
 
 (define-foreign-record-type (index-time git_index_time)
   (time-t seconds index-time-seconds)
@@ -177,22 +183,30 @@
 ;; common.h
 
 (define-foreign-record-type (strarray git_strarray)
-  (constructor: make-strarray)
+  (constructor: %make-strarray)
   ((c-pointer c-string) strings %strarray-strings)
   (unsigned-int count strarray-count))
 
-;; Not really needed, just here for completion's sake.
-;; In fact using it will probably just result in a double-free.
+(define (make-strarray)
+  (set-finalizer! (%make-strarray)
+    (lambda (strarray)
+      (strarray-free strarray))))
+
 (define strarray-free (foreign-lambda void git_strarray_free strarray))
 
 ;; Gets a GC'd list of strings from the strarray
 ;; (for return from e.g. git_reference_listall).
 (define (strarray-strings sa)
-  ((foreign-lambda* c-string-list* ((strarray sa))
-     "char **s = (char **)malloc(sizeof(char *) * (sa->count + 1));
-      memcpy(s, sa->strings, sizeof(char *) * (sa->count + 1));
-      *(s + sa->count) = NULL;
-      C_return(s);")
+  ((foreign-lambda* c-string-list ((strarray sa))
+     "int i;
+      char **t;
+      t = malloc(sizeof(char *) * sa->count + 1);
+      for(i = 0; i < sa->count; i++) {
+        t[i] = malloc(strlen(sa->strings[i]) + 1);
+        strcpy(t[i], sa->strings[i]);
+      }
+      t[i] = NULL;
+      C_return(t);")
      sa))
 
 (define (libgit2-version)
