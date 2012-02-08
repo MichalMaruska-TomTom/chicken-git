@@ -674,11 +674,13 @@
 (define-external (tree_diff_callback (tree-diff-data diff) (scheme-object fn)) int
   (fn diff))
 
-(define (tree-diff old new acc)
-  (guard-errors tree-diff
-    ((foreign-safe-lambda int git_tree_diff
-       tree tree (function int (tree-diff-data scheme-object)) scheme-object)
-       old  new  (location tree_diff_callback)                 acc)))
+;; XXX This should check its return value,
+;; but git_tree_diff erroneously reports an
+;; error under certain circumstances.
+(define (tree-diff old new data)
+  ((foreign-safe-lambda int git_tree_diff
+     tree tree (function int (tree-diff-data scheme-object)) scheme-object)
+     old  new  (location tree_diff_callback)                 data))
 
 (define/allocate tree-builder tree-builder-create
   (git_treebuilder_create (tree source)))
