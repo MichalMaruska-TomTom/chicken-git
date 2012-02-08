@@ -304,7 +304,9 @@
   ((invalidargs         err/invalidargs)          GIT_EINVALIDARGS)
   ((objcorrupted        err/objcorrupted)         GIT_EOBJCORRUPTED)
   ((ambiguousoidprefix  err/ambiguousoidprefix)   GIT_EAMBIGUOUSOIDPREFIX)
-  ((passthrough         err/passthrough)          GIT_EPASSTHROUGH))
+  ((passthrough         err/passthrough)          GIT_EPASSTHROUGH)
+  ((nomatch             err/nomatch)              GIT_ENOMATCH)
+  ((shortbuffer         err/shortbuffer)          GIT_ESHORTBUFFER))
 
 (define lasterror  (foreign-lambda c-string git_lasterror))
 (define clearerror (foreign-lambda void git_clearerror))
