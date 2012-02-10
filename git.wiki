@@ -447,6 +447,40 @@ Removes the object at the given {{path}} from the {{tree-builder}}'s tree.
 Writes the {{tree-builder}}'s tree to the given {{repository}}, modifying the
 on-disk repository on success. The resulting {{tree}} is returned.
 
+==== Tree Diff
+
+<record>tree-diff</record>
+<procedure>(tree-diff? obj) => boolean</procedure>
+
+A {{tree-diff}} is the difference of a single file across two Git {{tree}}s.
+Each tree-diff has a path, status, and a pair of {{oid}}s and Unix file
+attributes (for the older & newer file, respectively).
+
+<procedure>(tree-diff tree1 tree2) => list</procedure>
+
+Compares two {{tree}}s, returning a list of {{tree-diff}} objects for every
+difference between them.
+
+<procedure>(tree-diff-path tree-diff)</procedure>
+
+Returns the path of the given {{tree-diff}}, relative to the repository's
+root.
+
+<procedure>(tree-diff-status tree-diff) => symbol</procedure>
+
+Returns a symbol representing the diff status of a {{tree-diff}}, which will be
+one of {{added}}, {{deleted}}, or {{modified}}.
+
+<procedure>(tree-diff-old-oid tree-diff) => oid</procedure>
+<procedure>(tree-diff-new-oid tree-diff) => oid</procedure>
+
+Returns the older or newer {{oid}} of the given {{tree-diff}}.
+
+<procedure>(tree-diff-old-attr tree-diff) => int</procedure>
+<procedure>(tree-diff-new-attr tree-diff) => int</procedure>
+
+Returns the older or newer Unix file attributes of the given {{tree-diff}}.
+
 ==== Status
 
 <procedure>(file-status repository path) => symbol</procedure>
@@ -468,6 +502,11 @@ This status will be one of the following symbols:
 Currently, if a file is of two statuses (for example, partially-staged, so it
 is both {{index/modified}} and {{worktree/modified}}) this function will return
 the empty list.
+
+<procedure>(file-ignored? repository path) => boolean</procedure>
+
+Returns a boolean indicating whether the given {{path}} in {{repository}} is
+ignored by Git or not.
 
 ==== Index
 
