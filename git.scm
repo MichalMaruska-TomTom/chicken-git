@@ -43,7 +43,7 @@
     (only files normalize-pathname make-pathname)
     (except chicken repository-path)
     (prefix git-lolevel git-)
-    (only lolevel record->vector record-instance-type number-of-bytes move-memory!))
+    (only lolevel record->vector number-of-bytes move-memory! tag-pointer pointer-tag))
   (require-library srfi-1 extras posix files lolevel git-lolevel)
 
 (define-for-syntax (s+ . args)
@@ -191,8 +191,27 @@
 ;; References
 
 (define-git-record-type
-  (reference oid type name delete reload is-packed)
+  (reference oid type name reload is-packed)
   (format "#<reference ~S>" (reference-name reference)))
+
+;; When a reference is deleted with git_reference_delete
+;; its pointer is invalidated, so when a reference record
+;; is GC'd we have to make sure it wasn't already freed by
+;; a deletion during its lifetime. Here, we set a GC tag
+;; on the pointer, which reference-delete will remove.
+(define pointer->reference
+  (let ((pointer->reference* pointer->reference))
+    (lambda (ptr)
+      (set-finalizer! (pointer->reference* (tag-pointer ptr 'gc))
+        (lambda (ref)
+          (let ((ref* (reference->pointer ref)))
+            (if (pointer-tag ref*)
+              (git-reference-free ref*))))))))
+
+(define (reference-delete ref)
+  (let ((ref* (reference->pointer ref)))
+    (reference->pointer-set! ref (tag-pointer ref* #f))
+    (git-reference-delete ref*)))
 
 ;; Follow symbolic references to get an OID.
 ;; Not sure if this is kosher, but it doesn't
