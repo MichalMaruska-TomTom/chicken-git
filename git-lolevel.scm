@@ -197,7 +197,7 @@
 ;; Gets a GC'd list of strings from the strarray
 ;; (for return from e.g. git_reference_listall).
 (define (strarray-strings sa)
-  ((foreign-lambda* c-string-list ((strarray sa))
+  ((foreign-lambda* c-string-list* ((strarray sa))
      "int i;
       char **t;
       t = malloc(sizeof(char *) * sa->count + 1);
