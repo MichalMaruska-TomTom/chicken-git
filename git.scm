@@ -282,7 +282,9 @@
 (define (commit-author cmt)    (pointer->signature (git-commit-author (commit->pointer cmt))))
 (define (commit-committer cmt) (pointer->signature (git-commit-committer (commit->pointer cmt))))
 (define (commit-parent cmt #!optional (n 0))
-  (pointer->commit (git-commit-parent (commit->pointer cmt) n)))
+  (condition-case
+    (pointer->commit (git-commit-parent (commit->pointer cmt) n))
+    ((git) #f)))
 
 (define (commit repo ref)
   (pointer->commit

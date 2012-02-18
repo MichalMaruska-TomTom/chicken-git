@@ -269,7 +269,8 @@ respective {{signature}}s.
 {{commit-parentcount}} returns the number of parents for a given {{commit}}.
 
 {{commit-parent}} returns the {{n}}th parent of the given {{commit}}, or the
-first if no {{n}} is given.
+first if no {{n}} is given. If the {{commit}} has no parent, {{#f}} is
+returned.
 
 <procedure>(create-commit repository #!key message tree [parents] author [committer] [reference]) => commit</procedure>
 
