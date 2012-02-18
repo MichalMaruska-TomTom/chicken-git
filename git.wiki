@@ -234,10 +234,15 @@ Returns the {{commit}} specified by the given {{ref}} from the repository.
 {{ref}} may be a SHA1 string, {{oid}}, {{reference}} or {{commit}}. An error
 is signaled if no such {{commit}} exists.
 
-<procedure>(commits repository #!key [initial] [hide] [sort]) => list</procedure>
+<procedure>(commits repository #!key [initial] [hide] [sort] [max]) => list</procedure>
 
-Returns a list of all {{commit}}s in the given {{repository}}. If a {{commit}}
-or SHA1 {{initial}} is given, 
+Returns a list of the {{commit}}s in the given {{repository}}. If an
+{{initial}} {{commit}} or SHA1 is given, only commits that are ancestors of
+that revision will be returned. If a list of revisions to {{hide}} is given,
+they and their ancestors will be ignored. If a {{sort}} is specified, commits
+will be collected in the given order; this sort order must be one of the
+symbols {{none}}, {{topo}}, {{time}} or {{rev}}. If a number {{max}} is given,
+at most {{max}} commits will be returned.
 
 <procedure>(commit-id commit) => oid</procedure>
 
