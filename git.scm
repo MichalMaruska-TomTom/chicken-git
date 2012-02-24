@@ -40,7 +40,7 @@
     (only srfi-1 iota)
     (only extras format)
     (only posix current-directory)
-    (only files normalize-pathname make-pathname)
+    (only files normalize-pathname make-pathname pathname-strip-directory)
     (except chicken repository-path)
     (prefix git-lolevel git-)
     (only lolevel record->vector number-of-bytes move-memory! tag-pointer pointer-tag))
@@ -575,9 +575,14 @@
 (define (tree-ref tree key)
   (pointer->tree-entry
     (let ((tree* (tree->pointer tree)))
-      (cond ((string? key) (git-tree-entry-byname tree* key))
-            ((number? key) (git-tree-entry-byindex tree* key))
-            (else (git-git-error 'tree-ref "Invalid key" key))))))
+      (cond ((number? key)
+             (git-tree-entry-byindex tree* key))
+            ((string? key)
+             (or (git-tree-entry-byname tree* key)
+                 (and-let* ((subtree* (git-tree-get-subtree tree* key)))
+                   (git-tree-entry-byname subtree* (pathname-strip-directory key)))))
+            (else
+             (git-git-error 'tree-ref "Invalid key" key))))))
 
 ;; I'd like to do away with the repo argument
 ;; here and use git_object_owner to figure it

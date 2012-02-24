@@ -376,8 +376,9 @@ include entries of contained directories.
 
 <procedure>(tree-ref tree key) => tree-entry</procedure>
 
-Returns a {{tree-entry}} object for the given {{key}}, or {{#f}} if no such
-object is found. {{key}} may be a zero-based integer index or a filename string.
+Returns a {{tree-entry}} object for the given {{key}} from the tree, or
+{{#f}} if no such tree entry is found. {{key}} may be a zero-based integer
+index or a pathname string.
 
 <procedure>(tree->list tree [repository]) => list</procedure>
 
