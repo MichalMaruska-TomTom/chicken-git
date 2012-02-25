@@ -33,7 +33,7 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-oid tree-diff-new-oid tree-diff-path tree-diff-status
+   tree-diff tree-diff* tree-diff-old-attr tree-diff-new-attr tree-diff-old-oid tree-diff-new-oid tree-diff-path tree-diff-status
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -649,11 +649,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Diffs
 
-;; TODO Debug, figure out why this
-;; type won't work like the others.
 (define-record tree-diff old-oid new-oid old-attr new-attr status path)
-(define-record-printer (tree-diff _ out)
-  (display "#<tree-diff>" out))
+(define-record-printer (tree-diff diff out)
+  (display (format "#<tree-diff ~S>" (tree-diff-path diff)) out))
 
 (define (tree-diff tree1 tree2)
   (let ((acc '()))
@@ -676,6 +674,28 @@
                   (git-tree-diff-path diff))
                 acc))))
     acc))
+
+;; Diff two trees, but allow false to represent
+;; an empty or nonexistent tree (to create a diff
+;; where all files are either added or deleted).
+(define (tree-diff* tree1 tree2)
+  (cond ((and tree1 tree2)
+         (tree-diff tree1 tree2))
+        ((not tree1)
+         (map (lambda (e)
+                (make-tree-diff
+                  #f (tree-entry-id e)
+                  0 (tree-entry-attributes e)
+                  'added (tree-entry-name e)))
+              (tree->list tree2)))
+        ((not tree2)
+         (map (lambda (e)
+                (make-tree-diff
+                  (tree-entry-id e) #f
+                  (tree-entry-attributes e) 0
+                  'deleted (tree-entry-name e)))
+              (tree->list tree1)))
+        (else '())))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs
