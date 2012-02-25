@@ -14,7 +14,7 @@
    reference? reference references create-reference reference-resolve
    reference-id reference-name reference-target reference-type
    reference-target-set reference-rename reference-delete
-   commit? commit commits create-commit commit-id
+   commit? commit commits commits-fold create-commit commit-id
    commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
    commit-author commit-committer commit-parent commit-tree
@@ -292,39 +292,39 @@
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
 
-(define (commits repo #!key initial (hide '()) (sort 'none) (max +inf.0))
+(define (commits-fold kons knil repo #!key initial (hide '()) (sort 'none))
   (call-with-current-continuation
     (lambda (return)
-      (map (lambda (oid*) (commit repo (pointer->oid oid*)))
-           (let ((walker (git-revwalk-new (repository->pointer repo))))
-             (dynamic-wind
-               void
-               (lambda ()
-                 ;; Sort mode, one of '(none topo time rev)
-                 (git-revwalk-sorting walker sort)
-                 ;; Set hidden commits. These exclude
-                 ;; full branches from the traversal,
-                 ;; rather than just the commits.
-                 (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
-                           (map oid->pointer (map ->oid hide)))
-                 ;; Set initial revision.
-                 ;; Use HEAD if none is given (allowed? safe?).
-                 ;; HEAD should always exist if there's at least one commit, so...
-                 (git-revwalk-push walker
-                   (condition-case
-                     (oid->pointer (->oid (or initial (reference repo "HEAD"))))
-                     ((git) (return '()))))
-                 ;; Collect commits, up to max.
-                 (let lp ((i max)
-                          (acc '()))
-                   (if (zero? i)
-                     acc
-                     (condition-case
-                       (lp (- i 1)
-                           (cons (git-revwalk-next walker) acc))
-                       ((git) acc)))))
-               (lambda ()
-                 (git-revwalk-free walker))))))))
+      (let ((walker #f))
+        (dynamic-wind
+          (lambda ()
+            (set! walker
+              (git-revwalk-new (repository->pointer repo))))
+          (lambda ()
+            ;; Sort mode, one of '(none topo time rev)
+            (git-revwalk-sorting walker sort)
+            ;; Set hidden commits. These exclude
+            ;; full branches from the traversal,
+            ;; rather than just the commits.
+            (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
+                      (map oid->pointer (map ->oid hide)))
+            ;; Set initial revision.
+            ;; Use HEAD if none is given (allowed? safe?).
+            ;; HEAD should always exist if there's at least one commit, so...
+            (git-revwalk-push walker
+              (condition-case
+                (oid->pointer
+                  (->oid (or initial (reference repo "HEAD"))))
+                ((git) (return '()))))
+            (let lp ((state knil))
+              (condition-case
+                (lp (kons (commit repo (pointer->oid (git-revwalk-next walker))) state))
+                ((git) state))))
+          (lambda ()
+            (git-revwalk-free walker)))))))
+
+(define (commits repo . rest)
+  (apply commits-fold cons '() repo rest))
 
 (define (create-commit repo #!key tree message (parents '()) author (committer author) (reference #f))
   (commit repo
