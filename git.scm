@@ -579,8 +579,11 @@
              (git-tree-entry-byindex tree* key))
             ((string? key)
              (or (git-tree-entry-byname tree* key)
-                 (and-let* ((subtree* (git-tree-get-subtree tree* key)))
-                   (git-tree-entry-byname subtree* (pathname-strip-directory key)))))
+                 (condition-case
+                   (git-tree-entry-byname
+                     (git-tree-get-subtree tree* key)
+                     (pathname-strip-directory key))
+                   ((git) #f))))
             (else
              (git-git-error 'tree-ref "Invalid key" key))))))
 

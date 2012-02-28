@@ -318,7 +318,7 @@
             (test-assert (tree repo (tree-id tr)))
             (test-group "tree-entry"
               (test #f (tree-ref tr -1))
-              (test #f (tree-ref tr "not-a-file"))
+              (test #f (tree-ref tr "not/a/file"))
               (parameterize ((current-directory *repository*))
                 (for-each
                   (lambda (file content i)
