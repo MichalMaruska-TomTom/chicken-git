@@ -1,15 +1,27 @@
-(define *required-chicken* "4.6.0")
+(define *required-chicken* '("4.7.0"  . #(4 7 0)))
+(define *required-libgit2* '("0.16.0" . #(0 16 0)))
 
-(when (string<? (chicken-version) *required-chicken*)
+(when (string<? (chicken-version) (car *required-chicken*))
   (fprintf (current-error-port)
            "\n  git: This extension requires Chicken version ~a or later."
-           *required-chicken*)
+           (car *required-chicken*))
   (exit 1))
 
 (compile -s -O2 -d0 -lgit2 git-lolevel.scm -J)
 (compile -s -O2 -d0 git-lolevel.import.scm)
 (compile -s -O2 -d0 -lgit2 git.scm -J)
 (compile -s -O2 -d0 git.import.scm)
+
+(load "./git-lolevel.so")
+(load "./git-lolevel.import.so")
+(import (only git-lolevel libgit2-version))
+
+(when (not (equal? (libgit2-version) (cdr *required-libgit2*)))
+  (fprintf (current-error-port)
+           "\n  git: This extension requires libgit2 ~a."
+           (car *required-libgit2*))
+  (exit 1))
+
 (install-extension 'git
   '("git-lolevel.so" "git-lolevel.import.so"
     "git.so" "git.import.so")
