@@ -26,8 +26,11 @@
 (define-syntax guard-errors
   (syntax-rules ()
     ((_ <loc> <exp>)
-     (let ((res <exp>))
-       (if (< res 0) (git-error <loc> (lasterror)))))))
+     (begin
+       (clearerror)
+       (let ((res <exp>))
+         (if (< res 0)
+           (git-error <loc> (lasterror))))))))
 
 ;; This could be compacted a bit more later, but for
 ;; right now we'll keep syntax-rules for readability.
