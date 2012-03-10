@@ -234,15 +234,19 @@ Returns the {{commit}} specified by the given {{ref}} from the repository.
 {{ref}} may be a SHA1 string, {{oid}}, {{reference}} or {{commit}}. An error
 is signaled if no such {{commit}} exists.
 
-<procedure>(commits repository #!key [initial] [hide] [sort] [max]) => list</procedure>
+<procedure>(commits-fold kons knil repository #!key [initial] [hide] [sort]) => list</procedure>
 
-Returns a list of the {{commit}}s in the given {{repository}}. If an
-{{initial}} {{commit}} or SHA1 is given, only commits that are ancestors of
-that revision will be returned. If a list of revisions to {{hide}} is given,
-they and their ancestors will be ignored. If a {{sort}} is specified, commits
-will be collected in the given order; this sort order must be one of the
-symbols {{none}}, {{topo}}, {{time}} or {{rev}}. If a number {{max}} is given,
-at most {{max}} commits will be returned.
+Folds over the given {{repository}}'s commits. If an {{initial}} {{commit}} or
+SHA1 is given, only commits that are ancestors of that revision will be
+returned. If a list of revisions to {{hide}} is given, they and their ancestors
+will be ignored. If a {{sort}} is specified, commits will be collected in the
+given order; this sort order must be one of the symbols {{none}}, {{topo}},
+{{time}} or {{rev}}.
+
+<procedure>(commits repository #!rest args) => list</procedure>
+
+Returns a list of the {{commit}}s in the given {{repository}}. {{args}} follows
+the {{#!key}} arguments specification for {{commits-fold}}.
 
 <procedure>(commit-id commit) => oid</procedure>
 
@@ -259,8 +263,10 @@ Returns the {{oid}} for the given {{commit}}.
 Returns the full commit message of the given {{commit}}.
 
 <procedure>(commit-tree commit) => tree</procedure>
+<procedure>(commit-tree-id commit) => oid</procedure>
 
-Returns the {{tree}} associated with the given {{commit}}.
+Return the {{tree}} associated with the given {{commit}} and its {{oid}},
+respectively.
 
 <procedure>(commit-author commit) => signature</procedure>
 <procedure>(commit-committer commit) => signature</procedure>
@@ -466,20 +472,21 @@ attributes (for the older & newer file, respectively).
 <procedure>(tree-diff tree1 tree2) => list</procedure>
 
 Compares two {{tree}}s, returning a list of {{tree-diff}} objects for every
-difference between them.
-
-<procedure>(tree-diff-path tree-diff)</procedure>
-
-Returns the path of the given {{tree-diff}}, relative to the repository's
-root.
+difference between them. {{#f}} may be used to represent an empty tree, in which
+case all resulting {{tree-diff}}s will have status {{added}} or {{deleted}}.
 
 <procedure>(tree-diff-status tree-diff) => symbol</procedure>
 
 Returns a symbol representing the diff status of a {{tree-diff}}, which will be
 one of {{added}}, {{deleted}}, or {{modified}}.
 
-<procedure>(tree-diff-old-oid tree-diff) => oid</procedure>
-<procedure>(tree-diff-new-oid tree-diff) => oid</procedure>
+<procedure>(tree-diff-path tree-diff)</procedure>
+
+Returns the path of the given {{tree-diff}}, relative to the repository's
+root.
+
+<procedure>(tree-diff-old-id tree-diff) => oid</procedure>
+<procedure>(tree-diff-new-id tree-diff) => oid</procedure>
 
 Returns the older or newer {{oid}} of the given {{tree-diff}}.
 
