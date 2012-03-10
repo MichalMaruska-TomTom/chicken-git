@@ -190,9 +190,7 @@
   (unsigned-int count strarray-count))
 
 (define (make-strarray)
-  (set-finalizer! (%make-strarray)
-    (lambda (strarray)
-      (strarray-free strarray))))
+  (set-finalizer! (%make-strarray) strarray-free))
 
 (define strarray-free (foreign-lambda void git_strarray_free strarray))
 
