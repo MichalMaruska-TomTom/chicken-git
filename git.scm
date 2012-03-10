@@ -106,7 +106,7 @@
   (oid->string (->oid obj) len))
 
 (define (oid->string id #!optional (len 40))
-  (git-oid-to-string (min len 40) (oid->pointer id)))
+  (git-oid-tostr (min len 40) (oid->pointer id)))
 
 (define (string->oid str) (pointer->oid (git-oid-fromstr str)))
 (define (oid->path oid)   (git-oid-pathfmt (oid->pointer oid)))
