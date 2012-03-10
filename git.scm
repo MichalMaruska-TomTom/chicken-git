@@ -33,7 +33,7 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-oid tree-diff-new-oid tree-diff-path tree-diff-status
+   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-id tree-diff-new-id tree-diff-path tree-diff-status
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -653,31 +653,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Diffs
 
-(define-record tree-diff old-oid new-oid old-attr new-attr status path)
-(define-record-printer (tree-diff diff out)
-  (display (format "#<tree-diff ~S>" (tree-diff-path diff)) out))
+(define-git-record-type
+  (tree-diff old-oid new-oid old-attr new-attr status path)
+  (format "#<tree-diff ~S>" (tree-diff-path tree-diff)))
+
+(define (tree-diff-old-id diff) (pointer->oid (tree-diff-old-oid diff)))
+(define (tree-diff-new-id diff) (pointer->oid (tree-diff-new-oid diff)))
 
 (define (tree-diff tree1 tree2)
-  (let ((acc '()))
-    (git-tree-diff
-      (and tree1 (tree->pointer tree1))
-      (and tree2 (tree->pointer tree2))
-      (lambda (diff)
-        ;; We build and set! a record here in the thunk
-        ;; because something isn't working correctly with
-        ;; this callback when using a macro-generated record
-        ;; type (i.e. defined by define-git-record-type).
-        ;; TODO Find out why and fix it.
-        (set! acc
-          (cons (make-tree-diff
-                  (pointer->oid (git-tree-diff-old-oid diff))
-                  (pointer->oid (git-tree-diff-new-oid diff))
-                  (git-tree-diff-old-attr diff)
-                  (git-tree-diff-new-attr diff)
-                  (git-tree-diff-status diff)
-                  (git-tree-diff-path diff))
-                acc))))
-    acc))
+  (map pointer->tree-diff
+       (git-tree-diff
+         (and tree1 (tree->pointer tree1))
+         (and tree2 (tree->pointer tree2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs

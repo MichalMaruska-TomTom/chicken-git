@@ -638,12 +638,17 @@
   ((modified diff/modified) GIT_STATUS_MODIFIED))
 
 (define-foreign-record-type (tree-diff-data git_tree_diff_data)
+  (constructor: %make-tree-diff)
+  (destructor: tree-diff-free)
   (unsigned-int old_attr tree-diff-old-attr)
   (unsigned-int new_attr tree-diff-new-attr)
   ((struct oid) old_oid  tree-diff-old-oid)
   ((struct oid) new_oid  tree-diff-new-oid)
   (diff         status   tree-diff-status)
   (c-string     path     tree-diff-path))
+
+(define (make-tree-diff)
+  (set-finalizer! (%make-tree-diff) tree-diff-free))
 
 (define/allocate tree tree-lookup
   (git_tree_lookup (repository repo) (oid id)))
@@ -676,13 +681,18 @@
 (define-external (tree_diff_callback (tree-diff-data diff) (scheme-object fn)) int
   (fn diff))
 
-;; XXX This should check its return value,
-;; but git_tree_diff erroneously reports an
-;; error under certain circumstances.
-(define (tree-diff old new data)
-  ((foreign-safe-lambda int git_tree_diff
-     tree tree (function int (tree-diff-data scheme-object)) scheme-object)
-     old  new  (location tree_diff_callback)                 data))
+(define (tree-diff old new)
+  (let ((acc (list 'placeholder)))
+    (guard-errors 'tree-diff
+      ((foreign-safe-lambda int git_tree_diff
+         tree tree (function int (tree-diff-data scheme-object)) scheme-object)
+         old  new  (location tree_diff_callback)
+         (lambda (diff)
+           (let ((dest (make-tree-diff)))
+             (move-memory! diff dest (foreign-value "sizeof(git_tree_diff_data)" int))
+             (set-cdr! acc
+               (cons dest (cdr acc)))))))
+    (cdr acc)))
 
 (define/allocate tree-builder tree-builder-create
   (git_treebuilder_create (tree source)))
