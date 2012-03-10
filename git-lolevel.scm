@@ -11,6 +11,7 @@
   (import scheme lolevel foreign foreigners
     (except chicken repository-path)
     (only srfi-13 string-index))
+  (require-library srfi-13 lolevel)
 
 ;; Errors are composite conditions
 ;; of properties (exn git).
