@@ -17,7 +17,7 @@
    commit? commit commits commits-fold create-commit commit-id
    commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
-   commit-author commit-committer commit-parent commit-tree
+   commit-author commit-committer commit-parent commit-tree commit-tree-id
    blob*? blob* blob*-content blob*-size
    index? index-open index-find index-ref index->list
    index-clear index-add index-remove index-read index-write
@@ -76,7 +76,7 @@
                     (let ((getter (s+ name '- attr)))
                       `(define (,getter obj)
                         ,(case attr
-                          ((id) `(pointer->oid (,->pointer obj)))
+                          ((id) `(pointer->oid (,(s+ 'git- getter) (,->pointer obj))))
                           (else `(,(s+ 'git- getter) (,->pointer obj)))))))
                   attr))))))
 
@@ -279,6 +279,7 @@
   (git-commit-free))
 
 (define (commit-tree cmt)      (pointer->tree (git-commit-tree (commit->pointer cmt))))
+(define (commit-tree-id cmt)   (pointer->oid  (git-commit-tree-oid (commit->pointer cmt))))
 (define (commit-author cmt)    (pointer->signature (git-commit-author (commit->pointer cmt))))
 (define (commit-committer cmt) (pointer->signature (git-commit-committer (commit->pointer cmt))))
 (define (commit-parent cmt #!optional (n 0))

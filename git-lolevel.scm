@@ -79,9 +79,7 @@
   (unsigned-char (id (foreign-value GIT_OID_RAWSZ int)) oid-id))
 
 (define (make-oid)
-  (set-finalizer! (%make-oid)
-    (lambda (oid)
-      (oid-free oid))))
+  (set-finalizer! (%make-oid) oid-free))
 
 (define-foreign-record-type (index-time git_index_time)
   (time-t seconds index-time-seconds)
