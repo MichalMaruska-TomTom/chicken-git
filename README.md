@@ -10,10 +10,9 @@ Assuming you have that, installation should be straightforward:
 
     $ git clone git://github.com/evhan/chicken-git.git
     $ cd chicken-git
-    $ chicken-install
+    $ chicken-install -test
 
-This library has been written and tested against Chicken 4.7 and
-libgit2 0.16.0. If you encounter problems, check your versions.
+This library requires libgit2 0.16.0 and Chicken 4.7 or newer.
 
 ## API
 

@@ -8,8 +8,7 @@
 
 Bindings to the [[http://libgit2.github.com|libgit2]] library.
 
-This library has been written and tested against Chicken 4.7 and libgit2
-0.16.0. If you encounter problems, check your versions.
+This library requires libgit2 0.16.0 and Chicken 4.7 or newer.
 
 The source for this egg is available at [[http://github.com/evhan/chicken-git]].
 
