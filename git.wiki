@@ -758,6 +758,11 @@ Deletes the property {{name}} from the given {{config}} object.
 
 On success, the change is written immediately to disk.
 
+=== History
+
+* 0.0.14 - libgit2 0.17.0 compatibility
+* 0.0.13 - libgit2 0.16.0
+
 === Author
 
 Evan Hanson
