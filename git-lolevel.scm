@@ -737,22 +737,6 @@
       ((foreign-lambda int git_tree_create_fromindex oid index) id ix))
     id))
 
-(define-external (tree_diff_callback (tree-diff-data diff) (scheme-object fn)) int
-  (fn diff))
-
-(define (tree-diff old new)
-  (let ((acc (list 'placeholder)))
-    (guard-errors 'tree-diff
-      ((foreign-safe-lambda int git_tree_diff
-         tree tree (function int (tree-diff-data scheme-object)) scheme-object)
-         old  new  (location tree_diff_callback)
-         (lambda (diff)
-           (let ((dest (make-tree-diff)))
-             (move-memory! diff dest (foreign-value "sizeof(git_tree_diff_data)" int))
-             (set-cdr! acc
-               (cons dest (cdr acc)))))))
-    (cdr acc)))
-
 (define/allocate tree-builder tree-builder-create
   (git_treebuilder_create (tree source)))
 
