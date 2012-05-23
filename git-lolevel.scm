@@ -273,23 +273,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
 
-(define-foreign-record-type (error git_error_t)
+(define-foreign-record-type (error git_error)
   (c-string message error-message)
   (int      klass   error-class))
 
 (define-foreign-enum-type (generic-error int)
   (generic-error->int int->generic-error)
-  ((ok           err/ok)          GIT_OK             0)
-  ((error        err/error)       GIT_ERROR         -1)
-  ((notfound     err/notfound)    GIT_ENOTFOUND     -3)
-  ((exists       err/exists)      GIT_EEXISTS       -4)
-  ((ambiguous    err/ambiguous)   GIT_EAMBIGUOUS    -5)
-  ((bufs         err/bufs)        GIT_EBUFS         -6)
-  ((passthrough  err/passthrough) GIT_EPASSTHROUGH -30)
-  ((revwalkover  err/revwalkover) GIT_EREVWALKOVER -31))
+  ((ok           err/ok)          GIT_OK)
+  ((error        err/error)       GIT_ERROR)
+  ((notfound     err/notfound)    GIT_ENOTFOUND)
+  ((exists       err/exists)      GIT_EEXISTS)
+  ((ambiguous    err/ambiguous)   GIT_EAMBIGUOUS)
+  ((bufs         err/bufs)        GIT_EBUFS)
+  ((passthrough  err/passthrough) GIT_PASSTHROUGH)
+  ((revwalkover  err/revwalkover) GIT_REVWALKOVER))
 
-
-(define-foreign-enum-type (error int)
+(define-foreign-enum-type (error-t int)
   (error->int int->error)
   ((nomemory   err/nomemory)   GITERR_NOMEMORY)
   ((os         err/os)         GITERR_OS)
@@ -307,8 +306,11 @@
   ((tree       err/tree)       GITERR_TREE)
   ((indexer    err/indexer)    GITERR_INDEXER))
 
-(define error-last  (foreign-lambda (c-pointer error) giterr_last))
 (define error-clear (foreign-lambda void giterr_clear))
+
+(define (error-last)
+  (and-let* ((err ((foreign-lambda (c-pointer error) giterr_last))))
+    (error-message err)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; index.h
