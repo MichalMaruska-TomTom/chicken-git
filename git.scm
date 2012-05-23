@@ -651,20 +651,37 @@
         (repository->pointer repo)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Tree Diffs
+;; Diffs
 
+;; Flat record type for diff delta and file info.
+;; TODO Should follow libgit2 structures here.
 (define-git-record-type
-  (tree-diff old-oid new-oid old-attr new-attr status path)
-  (format "#<tree-diff ~S>" (tree-diff-path tree-diff)))
+  (diff status similarity old-oid new-oid old-mode new-mode old-path new-path old-size new-size)
+  (format "#<tree-diff ~S>" (diff-new-path diff)))
 
-(define (tree-diff-old-id diff) (pointer->oid (tree-diff-old-oid diff)))
-(define (tree-diff-new-id diff) (pointer->oid (tree-diff-new-oid diff)))
+(define tree-diff? diff?)
+(define tree-diff-status diff-status)
 
-(define (tree-diff tree1 tree2)
-  (map pointer->tree-diff
-       (git-tree-diff
-         (and tree1 (tree->pointer tree1))
-         (and tree2 (tree->pointer tree2)))))
+(define (tree-diff-old-id diff) (pointer->oid (diff-old-oid diff)))
+(define (tree-diff-new-id diff) (pointer->oid (diff-new-oid diff)))
+
+;; Compatability.
+(define tree-diff-path     diff-new-path)
+(define tree-diff-old-attr diff-old-mode)
+(define tree-diff-new-attr diff-new-mode)
+
+(define (tree-diff repo tree1 tree2)
+  (let ((acc (list 0)))
+    (git-diff-foreach
+      (lambda (diff)
+        (set-cdr! acc
+          (cons (pointer->diff diff)
+                (cdr acc))))
+      (git-diff-tree-to-tree
+        (repository->pointer repo)
+        (and tree1 (tree->pointer tree1))
+        (and tree2 (tree->pointer tree2))))
+    (cdr acc)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs
