@@ -585,8 +585,8 @@
   (let-location ((ignore int))
     (guard-errors status-should-ignore
       ((foreign-lambda int git_status_should_ignore
-         repository c-string (c-pointer int))
-         repo       path     (location ignore)))
+         (c-pointer int)   repository c-string)
+         (location ignore) repo       path))
     (not (zero? ignore))))
 
 ;; Maybe TODO foreach.
