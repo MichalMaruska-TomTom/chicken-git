@@ -728,8 +728,8 @@
 (define/allocate tree tree-get-subtree
   (git_tree_get_subtree (tree tr) ((const c-string) path)))
 
-(define/allocate object tree-entry-2object
-  (git_tree_entry_2object (repository repo) (tree-entry entry)))
+(define/allocate object tree-entry-to-object
+  (git_tree_entry_to_object (repository repo) (tree-entry entry)))
 
 (define (tree-create-fromindex ix)
   (let ((id (make-oid)))

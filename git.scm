@@ -599,7 +599,7 @@
 ;; We'll just leave the argument for now.
 (define (tree-entry->object repo entry)
   (pointer->object
-    (git-tree-entry-2object
+    (git-tree-entry-to-object
       (repository->pointer repo)
       (tree-entry->pointer entry))))
 
