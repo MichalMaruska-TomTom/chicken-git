@@ -292,8 +292,8 @@
                   (test #t (tree? t2))
                   (test-group "tree diffs"
                     (test-error (tree-diff 'garbage))
-                    (test-assert (tree-diff t1 t2))
-                    (let ((diff (tree-diff t1 t2)))
+                    (test-assert (tree-diff repo t1 t2))
+                    (let ((diff (tree-diff repo t1 t2)))
                       (test #t (list? diff))
                       (test 1 (length diff))
                       (let ((diff (car diff)))
