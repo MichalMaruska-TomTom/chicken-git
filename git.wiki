@@ -468,11 +468,12 @@ A {{tree-diff}} is the difference of a single file across two Git {{tree}}s.
 Each tree-diff has a path, status, and a pair of {{oid}}s and Unix file
 attributes (for the older & newer file, respectively).
 
-<procedure>(tree-diff tree1 tree2) => list</procedure>
+<procedure>(tree-diff repository tree1 tree2) => list</procedure>
 
-Compares two {{tree}}s, returning a list of {{tree-diff}} objects for every
-difference between them. {{#f}} may be used to represent an empty tree, in which
-case all resulting {{tree-diff}}s will have status {{added}} or {{deleted}}.
+Compares two {{tree}}s in the given {{repository}}, returning a list of
+{{tree-diff}} objects for every difference between them. {{#f}} may be used to
+represent an empty tree, in which case all resulting {{tree-diff}}s will have
+status {{added}} or {{deleted}}.
 
 <procedure>(tree-diff-status tree-diff) => symbol</procedure>
 
