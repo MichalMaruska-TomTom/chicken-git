@@ -6,8 +6,8 @@
 (define *time*
   '(1323702635 . 2))
 (define *messages*
-  '("slain the Jabberwock"
-    "tagged the Jabberwock slain"))
+  '("slain the Jabberwock\n"
+    "tagged the Jabberwock slain\n"))
 (define *signature*
   '("Bandersnatch" . "banders@example.com"))
 (define *files*
