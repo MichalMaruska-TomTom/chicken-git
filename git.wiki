@@ -760,4 +760,4 @@ Evan Hanson
 
 === License
 
-Copyright (c) 2011, Evan Hanson, 3-Clause BSD License
+Copyright (c) 2012, Evan Hanson, 3-Clause BSD License

@@ -1,11 +1,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git-lolevel.scm - libgit2 bindings for Chicken Scheme
 ;;
-;; Copyright (c) 2011, Evan Hanson
+;; Copyright (c) 2012, Evan Hanson
 ;; See LICENSE for details
 ;;
-;; Getting to be sort of complete.
-;; Still, think twice before use.
+;; See git.scm for a cleaner, high-level API.
 
 (module git-lolevel *
   (import scheme lolevel foreign foreigners

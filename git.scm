@@ -1,10 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git.scm - libgit2 bindings for Chicken Scheme
 ;;
-;; Copyright (c) 2011, Evan Hanson
+;; Copyright (c) 2012, Evan Hanson
 ;; See LICENSE for details
 ;;
-;; Approaching usability.
+;; Pretty stable.
+;; Please report bugs (See README).
 
 (module git
   (object-id object-type object-sha
