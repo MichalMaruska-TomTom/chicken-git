@@ -50,6 +50,10 @@ imports, as the two libraries share many identifiers.
 
 A {{repository}} corresponds to an on-disk Git repository.
 
+Many objects are invalidated when the repository to which they belong is GC'd.
+As such, a handle to a repository should be kept for as long as its objects are
+in use.
+
 <procedure>(create-repository [path] [bare]) => repository</procedure>
 
 Creates & returns a new repository at the given {{path}}, or the value of
