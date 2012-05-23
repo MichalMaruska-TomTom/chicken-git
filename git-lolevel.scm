@@ -239,10 +239,11 @@
 (define-syntax define/config-path
   (lambda (e . r)
     `(define (,(cadr e))
-       (let ((str (make-string (foreign-value GIT_PATH_MAX int))))
-         (guard-errors ,(cadr e)
-           ((foreign-lambda int ,(caddr e) scheme-pointer) str))
-         (substring str 0 (string-index str #\x00))))))
+       (let ((len (foreign-value GIT_PATH_MAX int)))
+         (let ((str (make-string len)))
+           (guard-errors ,(cadr e)
+             ((foreign-lambda int ,(caddr e) scheme-pointer unsigned-int) str len))
+           (substring str 0 (string-index str #\x00)))))))
 
 (define/config-path config-find-global git_config_find_global)
 (define/config-path config-find-system git_config_find_system)
