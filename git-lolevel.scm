@@ -271,6 +271,85 @@
 (define/config setter bool      config-set-bool   git_config_set_bool)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; diff.h
+
+(define-foreign-type diff-list (c-pointer "git_diff_list"))
+
+(define-foreign-enum-type (delta int)
+  (delta->int int->delta)
+  ((modified  diff/unmodified) GIT_DELTA_UNMODIFIED)
+  ((added     diff/added)      GIT_DELTA_ADDED)
+  ((deleted   diff/deleted)    GIT_DELTA_DELETED)
+  ((modified  diff/modified)   GIT_DELTA_MODIFIED)
+  ((renamed   diff/renamed)    GIT_DELTA_RENAMED)
+  ((copied    diff/copied)     GIT_DELTA_COPIED)
+  ((ignored   diff/ignored)    GIT_DELTA_IGNORED)
+  ((untracked diff/untracked)  GIT_DELTA_UNTRACKED))
+
+(define-foreign-record-type (diff-options git_diff_options)
+  (constructor: %make-diff-options)
+  (destructor:  diff-options-free)
+  (unsigned-int32    flags           diff-options-flags           diff-options-flags-set!)
+  (unsigned-short    context_lines   diff-options-context-lines   diff-options-context-lines-set!)
+  (unsigned-short    interhunk_lines diff-options-interhunk-lines diff-options-interhunk-lines-set!)
+  (c-string          old_prefix      diff-options-old-prefix      diff-options-old-prefix-set!)
+  (c-string          new_prefix      diff-options-new-prefix      diff-options-new-prefix-set!)
+  ((struct strarray) pathspec        diff-options-pathspec        diff-options-pathspec-set!))
+
+(define-foreign-record-type (diff-file git_diff_file)
+  ((struct oid)   oid    diff-file-oid)
+  (c-string       path   diff-file-path)
+  (unsigned-short mode   diff-file-mode)
+  (off-t          size   diff-file-size)
+  (unsigned-int   flags  diff-file-flags))
+
+(define-foreign-record-type (diff git_diff_delta)
+  (constructor: %make-diff)
+  (destructor:  diff-free)
+  ((struct diff-file) old_file   diff-old-file)
+  ((struct diff-file) new_file   diff-new-file)
+  (delta              status     diff-status)
+  (unsigned-int       similarity diff-similarity)
+  (int                binary     diff-binary))
+
+;; For simplicity, flatten the git_diff_delta and git_diff_file APIs.
+(define (diff-old-oid delta)   (diff-file-oid (diff-old-file delta)))
+(define (diff-new-oid delta)   (diff-file-oid (diff-new-file delta)))
+(define (diff-old-mode delta)  (diff-file-mode (diff-old-file delta)))
+(define (diff-new-mode delta)  (diff-file-mode (diff-new-file delta)))
+(define (diff-old-path delta)  (diff-file-path (diff-old-file delta)))
+(define (diff-new-path delta)  (diff-file-path (diff-new-file delta)))
+(define (diff-old-size delta)  (diff-file-size (diff-old-file delta)))
+(define (diff-new-size delta)  (diff-file-size (diff-new-file delta)))
+(define (diff-old-flags delta) (diff-file-flags (diff-old-file delta)))
+(define (diff-new-flags delta) (diff-file-flags (diff-new-file delta)))
+
+(define (make-diff)
+  (set-finalizer! (%make-diff) diff-free))
+
+(define (make-diff-options)
+  (set-finalizer! (%make-diff-options) diff-options-free))
+
+(define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
+
+(define (diff-tree-to-tree repo old new)
+  (let-location ((diffs diff-list))
+    (guard-errors diff-tree-to-tree
+      ((foreign-lambda int git_diff_tree_to_tree
+        repository diff-options tree tree (c-pointer diff-list))
+        repo       #f           old  new  (location diffs)))
+    diffs))
+
+(define-external (diff_file_fn (scheme-object fn) (diff diff) (float progress)) int
+  (fn diff))
+
+(define (diff-foreach fn diffs)
+  (guard-errors diff-foreach
+    ((foreign-safe-lambda int git_diff_foreach
+      diff-list scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
+      diffs     fn            (location diff_file_fn)             #f        #f)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
 
 (define-foreign-record-type (error git_error)
@@ -629,25 +708,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tree.h
-
-(define-foreign-enum-type (diff int)
-  (diff->int int->diff)
-  ((added    diff/added)    GIT_STATUS_ADDED)
-  ((deleted  diff/deleted)  GIT_STATUS_DELETED)
-  ((modified diff/modified) GIT_STATUS_MODIFIED))
-
-(define-foreign-record-type (tree-diff-data git_tree_diff_data)
-  (constructor: %make-tree-diff)
-  (destructor: tree-diff-free)
-  (unsigned-int old_attr tree-diff-old-attr)
-  (unsigned-int new_attr tree-diff-new-attr)
-  ((struct oid) old_oid  tree-diff-old-oid)
-  ((struct oid) new_oid  tree-diff-new-oid)
-  (diff         status   tree-diff-status)
-  (c-string     path     tree-diff-path))
-
-(define (make-tree-diff)
-  (set-finalizer! (%make-tree-diff) tree-diff-free))
 
 (define/allocate tree tree-lookup
   (git_tree_lookup (repository repo) (oid id)))
