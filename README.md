@@ -12,7 +12,7 @@ Assuming you have that, installation should be straightforward:
     $ cd chicken-git
     $ chicken-install -test
 
-This library requires libgit2 0.16.0 and Chicken 4.7 or newer.
+This library requires libgit2 0.17.0 and Chicken 4.7 or newer.
 
 ## API
 

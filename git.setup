@@ -1,5 +1,5 @@
 (define *required-chicken* '("4.7.0"  . #(4 7 0)))
-(define *required-libgit2* '("0.16.0" . #(0 16 0)))
+(define *required-libgit2* '("0.17.0" . #(0 17 0)))
 
 (when (string<? (chicken-version) (car *required-chicken*))
   (fprintf (current-error-port)
