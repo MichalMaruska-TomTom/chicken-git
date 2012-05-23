@@ -238,7 +238,7 @@
 
 (define (references repo #!optional (type 'listall))
   (map (lambda (ref) (reference repo ref))
-       (git-reference-listall (repository->pointer repo) type)))
+       (git-reference-list (repository->pointer repo) type)))
 
 (define (create-reference repo #!key name target symbolic force)
   (let ((repo* (repository->pointer repo)))
