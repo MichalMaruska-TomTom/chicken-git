@@ -254,7 +254,7 @@
      (define (<fun> cfg name)
        (let-location ((out <type>))
          (guard-errors <fun>
-           ((foreign-lambda int <cfun> config (const c-string) (c-pointer <type>)) cfg name (location out)))
+           ((foreign-lambda int <cfun> (c-pointer <type>) config (const c-string)) (location out) cfg name))
          out)))
     ((_ setter <type> <fun> <cfun>)
      (define (<fun> cfg name val)
