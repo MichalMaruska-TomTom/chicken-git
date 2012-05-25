@@ -680,8 +680,8 @@
                 (cdr acc))))
       (git-diff-tree-to-tree
         (repository->pointer repo)
-        (and tree1 (tree->pointer tree1))
-        (and tree2 (tree->pointer tree2))))
+        (tree->pointer tree1)
+        (tree->pointer tree2)))
     (cdr acc)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
