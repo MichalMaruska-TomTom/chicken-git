@@ -30,7 +30,7 @@
    odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
-   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
+   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
@@ -535,6 +535,7 @@
             (cons (tag repo (reference-id (car tags))) acc)
             ((git) acc))))))
 
+(define (tag-peel tag) (pointer->object (git-tag-peel (tag->pointer tag))))
 (define (tag-tagger tag) (pointer->signature (git-tag-tagger (tag->pointer tag))))
 (define (tag-target tag) (pointer->object (git-tag-target (tag->pointer tag))))
 (define (tag-delete tag)

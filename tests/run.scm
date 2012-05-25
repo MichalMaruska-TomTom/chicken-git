@@ -239,6 +239,8 @@
             (test #t (oid? (tag-id tg)))
             (test #t (oid? (object-id tg)))
             (test 'tag (object-type tg))
+            (test #t (commit? (tag-target tg)))
+            (test #t (commit? (tag-peel tg)))
             (test #t (signature? (tag-tagger tg)))
             (test "0.0.1-β" (tag-name tg))
             (test (cadr *messages*) (tag-message tg))

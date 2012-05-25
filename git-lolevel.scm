@@ -693,8 +693,8 @@
 (define/allocate tag tag-lookup
   (git_tag_lookup (repository repo) (oid id)))
 
-(define/allocate object tag-target
-  (git_tag_target (tag t)))
+(define/allocate object tag-target (git_tag_target (tag t)))
+(define/allocate object tag-peel   (git_tag_peel (tag t)))
 
 (define tag-free       (foreign-lambda void git_tag_free tag))
 (define tag-id         (foreign-lambda oid git_tag_id tag))
