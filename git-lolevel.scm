@@ -358,6 +358,12 @@
       diff-list scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
       diffs     fn            (location diff_file_fn)             #f        #f)))
 
+(define (diff-blobs old new fn diffs)
+  (guard-errors diff-blobs
+    ((foreign-safe-lambda int git_diff_blobs
+      blob* blob* diff-options scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
+      old   new   #f           fn            (location diff_file_fn)             #f        #f)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
 
