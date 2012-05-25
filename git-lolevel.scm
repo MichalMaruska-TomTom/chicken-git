@@ -430,6 +430,15 @@
 (define index-entry-stage          (foreign-lambda int git_index_entry_stage index-entry))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; merge.h
+
+(define (merge-base repo a b)
+  (let ((id (make-oid)))
+    (guard-errors merge-base
+      ((foreign-lambda int git_merge_base oid repository oid oid) id repo a b))
+    id))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; object.h
 
 (define/allocate object object-lookup 

@@ -9,7 +9,7 @@
 
 (module git
   (object-id object-type object-sha
-   string->oid oid->string oid->path oid?
+   string->oid oid->string oid->path oid? merge-base
    repository? create-repository repository-open
    repository-path repository-ref repository-empty? repository-bare?
    reference? reference references create-reference reference-resolve
@@ -135,6 +135,9 @@
     ((commit) (pointer->commit ptr))
     ((tag)    (pointer->tag ptr))
     ((tree)   (pointer->tree ptr))))
+
+(define (merge-base r a b)
+  (pointer->oid (git-merge-base r (oid->pointer a) (oid->pointer b))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Repositories
