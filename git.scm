@@ -30,8 +30,8 @@
    odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
-   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
-   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
+   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
+   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-id tree-diff-new-id tree-diff-path tree-diff-status
@@ -687,6 +687,13 @@
         (tree->pointer tree1)
         (tree->pointer tree2)))
     (cdr acc)))
+
+(define (tree-walk tree fn . mode)
+  (git-tree-walk
+    (tree->pointer tree)
+    (lambda (path te*)
+      (fn path (pointer->tree-entry te*)))
+    (optional mode 'post)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs

@@ -780,6 +780,20 @@
       ((foreign-lambda int git_treebuilder_write oid repository tree-builder) id repo tb))
     id))
 
-;; Maybe TODO tree-builder-filter tree-walk
+(define-foreign-enum-type (treewalk-mode int)
+  (treewalk-mode->int int->treewalk-mode)
+  ((pre  treewalk-mode/pre)  GIT_TREEWALK_PRE)
+  ((post treewalk-mode/post) GIT_TREEWALK_POST))
+
+(define-external (treewalk_cb (c-string root) (tree-entry te) (scheme-object fn)) int
+  (fn root te))
+
+(define (tree-walk tr fn mode)
+  (guard-errors tree-walk
+    ((foreign-safe-lambda int git_tree_walk
+      tree (function int (c-string tree-entry scheme-object)) treewalk-mode scheme-object)
+      tr   (location treewalk_cb)                             mode          fn)))
+
+;; Maybe TODO tree-builder-filter
 
 )
