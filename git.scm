@@ -34,7 +34,8 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-id tree-diff-new-id tree-diff-path tree-diff-status
+   diff? tree-diff diff-similarity diff-status diff-old-file diff-new-file
+   diff-file? diff-file-id diff-file-path diff-file-mode diff-file-size diff-file-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -658,29 +659,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Diffs
 
-;; Flat record type for diff delta and file info.
-;; TODO Should follow libgit2 structures here.
 (define-git-record-type
-  (diff status similarity old-oid new-oid old-mode new-mode old-path new-path old-size new-size)
-  (format "#<tree-diff ~S>" (diff-new-path diff)))
+  (diff-file oid mode path size flags)
+  (format "#<diff-file ~S>" (diff-file-path diff-file)))
 
-(define tree-diff? diff?)
-(define tree-diff-status diff-status)
+(define-git-record-type
+  (diff-delta old-file new-file status similarity binary)
+  (format "#<diff ~S>" (diff-file-path (diff-new-file diff-delta))))
 
-(define (tree-diff-old-id diff) (pointer->oid (diff-old-oid diff)))
-(define (tree-diff-new-id diff) (pointer->oid (diff-new-oid diff)))
+(define (diff-file-id df) (pointer->oid (diff-file-oid df)))
 
-;; Compatability.
-(define tree-diff-path     diff-new-path)
-(define tree-diff-old-attr diff-old-mode)
-(define tree-diff-new-attr diff-new-mode)
+(define (diff-old-file diff) (and-let* ((f (git-diff-delta-old-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
+(define (diff-new-file diff) (and-let* ((f (git-diff-delta-new-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
+
+(define diff-status     diff-delta-status)
+(define diff-similarity diff-delta-similarity)
+(define diff-binary?    diff-delta-binary)
+(define diff?           diff-delta?)
 
 (define (tree-diff repo tree1 tree2)
   (let ((acc (list 0)))
     (git-diff-foreach
       (lambda (diff)
         (set-cdr! acc
-          (cons (pointer->diff diff)
+          (cons (pointer->diff-delta diff)
                 (cdr acc))))
       (git-diff-tree-to-tree
         (repository->pointer repo)

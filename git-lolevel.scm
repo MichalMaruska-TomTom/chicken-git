@@ -296,38 +296,26 @@
   ((struct strarray) pathspec        diff-options-pathspec        diff-options-pathspec-set!))
 
 (define-foreign-record-type (diff-file git_diff_file)
+  (constructor: %make-diff-file)
+  (destructor:  diff-file-free)
   ((struct oid)   oid    diff-file-oid)
   (c-string       path   diff-file-path)
   (unsigned-short mode   diff-file-mode)
   (off-t          size   diff-file-size)
   (unsigned-int   flags  diff-file-flags))
 
-(define-foreign-record-type (diff git_diff_delta)
-  (constructor: %make-diff)
-  (destructor:  diff-free)
-  ((struct diff-file) old_file   diff-old-file)
-  ((struct diff-file) new_file   diff-new-file)
-  (delta              status     diff-status)
-  (unsigned-int       similarity diff-similarity)
-  (int                binary     diff-binary))
+(define-foreign-record-type (diff-delta git_diff_delta)
+  (constructor: %make-diff-delta)
+  (destructor:  diff-delta-free)
+  ((struct diff-file) old_file   diff-delta-old-file)
+  ((struct diff-file) new_file   diff-delta-new-file)
+  (delta              status     diff-delta-status)
+  (unsigned-int       similarity diff-delta-similarity)
+  (int                binary     diff-delta-binary))
 
-;; For simplicity, flatten the git_diff_delta and git_diff_file APIs.
-(define (diff-old-oid delta)   (diff-file-oid (diff-old-file delta)))
-(define (diff-new-oid delta)   (diff-file-oid (diff-new-file delta)))
-(define (diff-old-mode delta)  (diff-file-mode (diff-old-file delta)))
-(define (diff-new-mode delta)  (diff-file-mode (diff-new-file delta)))
-(define (diff-old-path delta)  (diff-file-path (diff-old-file delta)))
-(define (diff-new-path delta)  (diff-file-path (diff-new-file delta)))
-(define (diff-old-size delta)  (diff-file-size (diff-old-file delta)))
-(define (diff-new-size delta)  (diff-file-size (diff-new-file delta)))
-(define (diff-old-flags delta) (diff-file-flags (diff-old-file delta)))
-(define (diff-new-flags delta) (diff-file-flags (diff-new-file delta)))
-
-(define (make-diff)
-  (set-finalizer! (%make-diff) diff-free))
-
-(define (make-diff-options)
-  (set-finalizer! (%make-diff-options) diff-options-free))
+(define (make-diff-file)    (set-finalizer! (%make-diff-file) diff-file-free))
+(define (make-diff-delta)   (set-finalizer! (%make-diff-delta) diff-delta-free))
+(define (make-diff-options) (set-finalizer! (%make-diff-options) diff-options-free))
 
 (define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
 
@@ -349,20 +337,20 @@
 
 (define/retval diff-merge (git_diff_merge (diff-list onto) (diff-list from)))
 
-(define-external (diff_file_fn (scheme-object fn) (diff diff) (float progress)) int
+(define-external (diff_file_fn (scheme-object fn) (diff-delta diff) (float progress)) int
   (fn diff))
 
 (define (diff-foreach fn diffs)
   (guard-errors diff-foreach
     ((foreign-safe-lambda int git_diff_foreach
-      diff-list scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
-      diffs     fn            (location diff_file_fn)             #f        #f)))
+      diff-list scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      diffs     fn            (location diff_file_fn)                   #f        #f)))
 
 (define (diff-blobs old new fn diffs)
   (guard-errors diff-blobs
     ((foreign-safe-lambda int git_diff_blobs
-      blob* blob* diff-options scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
-      old   new   #f           fn            (location diff_file_fn)             #f        #f)))
+      blob* blob* diff-options scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      old   new   #f           fn            (location diff_file_fn)                   #f        #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
