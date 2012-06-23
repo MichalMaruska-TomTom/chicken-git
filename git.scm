@@ -677,18 +677,40 @@
 (define diff-binary?    diff-delta-binary)
 (define diff?           diff-delta?)
 
-(define (tree-diff repo tree1 tree2)
+(define (build-diff-list diff-ptrs)
   (let ((acc (list 0)))
     (git-diff-foreach
       (lambda (diff)
         (set-cdr! acc
           (cons (pointer->diff-delta diff)
                 (cdr acc))))
-      (git-diff-tree-to-tree
-        (repository->pointer repo)
-        (tree->pointer tree1)
-        (tree->pointer tree2)))
+      diff-ptrs)
     (cdr acc)))
+
+(define diff
+  (case-lambda
+    ((repo)
+     (build-diff-list
+       (git-diff-workdir-to-index
+         (repository->pointer repo))))
+    ((repo tree1 tree2/type)
+     (build-diff-list
+       (let ((repo*  (repository->pointer repo))
+             (tree1* (tree->pointer tree1)))
+         (cond ((tree? tree2/type)
+                (git-diff-tree-to-tree
+                  repo*
+                  tree1*
+                  (tree->pointer tree2/type)))
+               ((eq? tree2/type 'workdir)
+                (git-diff-workdir-to-tree repo* tree1*))
+               ((or (eq? tree2/type 'index) (index? tree2/type))
+                (git-diff-index-to-tree repo* tree1*))
+               (else
+                (git-git-error
+                 'diff
+                  "Undiffable object"
+                  tree2/type))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs
