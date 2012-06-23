@@ -293,9 +293,9 @@
                 (let ((t2 (create-tree repo ix)))
                   (test #t (tree? t2))
                   (test-group "tree diffs"
-                    (test-error (tree-diff 'garbage))
-                    (test-assert (tree-diff repo t1 t2))
-                    (let ((diff (tree-diff repo t1 t2)))
+                    (test-error (diff 'garbage))
+                    (test-assert (diff repo t1 t2))
+                    (let ((diff (diff repo t1 t2)))
                       (test #t (list? diff))
                       (test 1 (length diff))
                       (let* ((diff (car diff))
