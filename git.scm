@@ -34,8 +34,10 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   diff? tree-diff diff-similarity diff-status diff-old-file diff-new-file
-   diff-file? diff-file-id diff-file-path diff-file-mode diff-file-size diff-file-flags
+   diff? diff diff-similarity diff-status diff-path diff-old-file diff-new-file
+   diff-file? diff-file-id diff-file-mode diff-file-path diff-file-size diff-file-flags
+   diff-old-id diff-new-id diff-old-mode diff-new-mode diff-old-path diff-new-path
+   diff-old-size diff-new-size diff-old-flags diff-new-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
