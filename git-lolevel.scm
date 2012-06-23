@@ -286,8 +286,6 @@
   ((untracked diff/untracked)  GIT_DELTA_UNTRACKED))
 
 (define-foreign-record-type (diff-options git_diff_options)
-  (constructor: %make-diff-options)
-  (destructor:  diff-options-free)
   (unsigned-int32    flags           diff-options-flags           diff-options-flags-set!)
   (unsigned-short    context_lines   diff-options-context-lines   diff-options-context-lines-set!)
   (unsigned-short    interhunk_lines diff-options-interhunk-lines diff-options-interhunk-lines-set!)
@@ -296,8 +294,6 @@
   ((struct strarray) pathspec        diff-options-pathspec        diff-options-pathspec-set!))
 
 (define-foreign-record-type (diff-file git_diff_file)
-  (constructor: %make-diff-file)
-  (destructor:  diff-file-free)
   ((struct oid)   oid    diff-file-oid)
   (c-string       path   diff-file-path)
   (unsigned-short mode   diff-file-mode)
@@ -305,17 +301,11 @@
   (unsigned-int   flags  diff-file-flags))
 
 (define-foreign-record-type (diff-delta git_diff_delta)
-  (constructor: %make-diff-delta)
-  (destructor:  diff-delta-free)
   ((struct diff-file) old_file   diff-delta-old-file)
   ((struct diff-file) new_file   diff-delta-new-file)
   (delta              status     diff-delta-status)
   (unsigned-int       similarity diff-delta-similarity)
   (int                binary     diff-delta-binary))
-
-(define (make-diff-file)    (set-finalizer! (%make-diff-file) diff-file-free))
-(define (make-diff-delta)   (set-finalizer! (%make-diff-delta) diff-delta-free))
-(define (make-diff-options) (set-finalizer! (%make-diff-options) diff-options-free))
 
 (define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
 
