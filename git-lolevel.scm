@@ -318,7 +318,7 @@
            ((foreign-lambda int <cfun>
              repository diff-options <type> ... (c-pointer diff-list))
              repo       #f           <arg>  ... (location diffs)))
-         diffs)))))
+         (set-finalizer! diffs diff-list-free))))))
 
 (define/diff diff-tree-to-tree     (git_diff_tree_to_tree (tree old) (tree new)))
 (define/diff diff-index-to-tree    (git_diff_index_to_tree (tree old)))
