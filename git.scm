@@ -663,12 +663,14 @@
   (diff-file oid mode path size flags)
   (format "#<diff-file ~S>" (diff-file-path diff-file)))
 
+;; The `diff-delta` record is renamed to just `diff`.
 (define-git-record-type
   (diff-delta old-file new-file status similarity binary)
   (format "#<diff ~S>" (diff-file-path (diff-new-file diff-delta))))
 
 (define (diff-file-id df) (pointer->oid (diff-file-oid df)))
 
+(define (diff-path diff) (diff-file-path (or (diff-new-file diff) (diff-old-file diff))))
 (define (diff-old-file diff) (and-let* ((f (git-diff-delta-old-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
 (define (diff-new-file diff) (and-let* ((f (git-diff-delta-new-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
 
@@ -711,6 +713,25 @@
                  'diff
                   "Undiffable object"
                   tree2/type))))))))
+
+;; Convenience accessors for diff-delta's old/new diff-file slots.
+;; Mostly for compatability, will probably be removed.
+(define-syntax define-diff-file-getter
+  (er-macro-transformer
+    (lambda (e r c)
+      (let ((slot (cadr e)))
+        `(begin
+           ,@(map (lambda (old/new)
+                    `(define (,(s+ 'diff- old/new '- slot) diff)
+                       (and-let* ((f (,(s+ 'diff- old/new '-file) diff)))
+                         (,(s+ 'diff-file- slot) f))))
+                  '(old new)))))))
+
+(define-diff-file-getter id)
+(define-diff-file-getter mode)
+(define-diff-file-getter path)
+(define-diff-file-getter size)
+(define-diff-file-getter flags)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs
