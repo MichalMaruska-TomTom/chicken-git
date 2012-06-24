@@ -158,6 +158,16 @@
 
       (let ((cmt (car (commits repo))))
 
+        (test-group "branch"
+          (test 1 (length (branches repo)))
+          (test-assert (create-branch repo "frabjous" cmt))
+          (test 2 (length (branches repo)))
+          (test-assert (member "refs/heads/frabjous" (map reference-name (branches repo))))
+          (test-assert (branch-rename repo "frabjous" "frumious"))
+          (test-assert (member "refs/heads/frumious" (map reference-name (branches repo))))
+          (test-assert (branch-delete repo "frumious"))
+          (test 1 (length (branches repo))))
+
         (test-group "commit"
           (test-error (commit repo 0))
           (test-error (commit repo *sha1*))
