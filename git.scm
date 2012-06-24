@@ -15,6 +15,7 @@
    reference? reference references create-reference reference-resolve
    reference-id reference-name reference-target reference-type
    reference-target-set reference-rename reference-delete
+   branches create-branch branch-rename branch-delete
    commit? commit commits commits-fold create-commit commit-id
    commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
@@ -273,6 +274,33 @@
 
 (define (reference-rename ref name #!optional force)
   (git-reference-rename (reference->pointer ref) name force))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Branches
+
+;; I'm changing branch-move to branch-rename here, perhaps gratuitously.
+;; I'm just so sick of typing `git branch rename foo bar` and having
+;; git whine at me, consider this payback.
+(define (branch-rename repo old new #!optional force)
+  (git-branch-move (repository->pointer repo) old new force))
+
+;; XXX Returns a reference.
+(define (create-branch repo name target #!optional force)
+  (git-branch-create
+    (repository->pointer repo)
+    name
+    (object->pointer target)
+    force)
+  ;; I think branches are only ever under refs/heads,
+  ;; so this should be OK to do... Right?
+  (reference repo (string-append "refs/heads/" name)))
+
+(define (branches repo #!optional (type 'local))
+  (map (lambda (ref) (reference repo ref))
+       (git-branch-list (repository->pointer repo) type)))
+
+(define (branch-delete repo name #!optional (type 'local))
+  (git-branch-delete (repository->pointer repo) name type))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commits
