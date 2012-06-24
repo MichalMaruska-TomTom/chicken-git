@@ -149,6 +149,31 @@
 (define blob*-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; branch.h
+
+(define-foreign-enum-type (btype int)
+  (btype->int int->btype)
+  ((local  btype/local)  GIT_BRANCH_LOCAL)
+  ((remote btype/remote) GIT_BRANCH_REMOTE))
+
+(define (branch-create repo name target force)
+  (let ((id (make-oid)))
+    (guard-errors branch-create
+      ((foreign-lambda int git_branch_create
+         oid repository c-string object bool)
+         id  repo       name     target force))
+    id))
+
+(define (branch-list repo flags)
+  (let ((sa (make-strarray)))
+    (guard-errors branch-list
+      ((foreign-lambda int git_branch_list strarray repository btype) sa repo flags))
+    (strarray-strings sa)))
+
+(define/retval branch-delete (git_branch_delete (repository repo) (c-string name) (btype type)))
+(define/retval branch-move   (git_branch_move   (repository repo) (c-string old) (c-string new) (bool force)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commit.h
 
 (define/allocate commit commit-lookup
