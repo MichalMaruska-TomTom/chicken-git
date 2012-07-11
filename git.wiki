@@ -183,6 +183,40 @@ is forced and the old reference will be overwritten.
 
 On success, the on-disk repository is updated immediately.
 
+==== Branch
+
+<procedure>(create-branch repository name target [force]) => reference</procedure>
+
+Creates a new branch in the given {{repository}} of the given {{name}} and
+{{target}} and returns a {{reference}} to the new branch. {{target}} must be a
+{{commit}} or {{tag}} belonging to the repository. If a branch of the given
+{{name}} exists and {{force}} is not given or {{#f}}, an error is signalled.
+Otherwise, creation is forced and the old branch is be overwritten.
+
+On success, the on-disk repository is updated immediately.
+
+<procedure>(branches repository [type]) => list</procedure>
+
+Returns a list {{reference}}s to each branch in the given {{repository}}. A
+{{type}} symbol may be given, either {{'local}} or {{'remote}}, to specify what
+type of branches should be listed; by default, {{'local}} is used.
+
+<procedure>(branch-rename repository old new [force]) => void</procedure>
+
+Renames a branch in the given repository from the {{old}} to {{new}}, which
+should be strings. If a true-valued {{force}} is given and a branch with the
+new name already exists, it will be overwritten.
+
+On success, the on-disk repository is updated immediately.
+
+<procedure>(branch-delete repository name [type]) => void</procedure>
+
+Deletes the branch with the given {{name}} in the {{repository}}. A {{type}}
+symbol may be given, either {{'local}} or {{'remote}}, to specify what type of
+branch should be deleted; by default, {{'local}} is used.
+
+On success, the on-disk repository is updated immediately.
+
 ==== Generic
 
 <procedure>(object-id object) => oid</procedure>
