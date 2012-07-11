@@ -336,6 +336,11 @@ update the the working branch with the new commit, for example, use "HEAD".
 
 On success, the on-disk repository is updated immediately.
 
+<procedure>(merge-base repository commit1 commit2) => commit</procedure>
+
+Returns the nearest common ancestor for the given commits. {{commit1}} and
+{{commit2}} may be {{commit}}s, commit {{oid}}s, or SHA1 hashes.
+
 ==== Tag
 
 <record>tag</record>
