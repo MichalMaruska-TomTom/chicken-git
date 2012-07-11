@@ -433,6 +433,12 @@ list of entries spanning the full directory tree.
 
 Creates and returns a {{tree}} object from the state of the given {{index}}.
 
+<procedure>(tree-walk tree fn [mode]) => void</procedure>
+
+Invokes the given function {{fn}} on each {{tree-entry}} in the given {{tree}}.
+A walk order may be specified by the symbol {{mode}}, which should be one of
+{{'pre}} or {{'post}}.
+
 ==== Tree Entry
 
 <record>tree-entry</record>
