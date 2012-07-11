@@ -378,9 +378,13 @@ Return the name or message of the given {{tag}}.
 Returns the {{signature}} of the {{tag}}'s creator.
 
 <procedure>(tag-target tag) => object</procedure>
+<procedure>(tag-peel tag) => object</procedure>
 
-Returns the object referred to by {{tag}}, which will be of type {{commit}},
-{{tree}}, {{blob}} or {{tag}}.
+{{tag-target}} returns the object referred to by {{tag}}, which will be of type
+{{commit}}, {{tree}}, {{blob}} or {{tag}}.
+
+{{tag-peel}} is similar to {{tag-target}}, except that it recursively
+dereferences the given {{tag}} until a non-tag object is found and returned.
 
 <procedure>(tag-delete tag) => void</procedure>
 
