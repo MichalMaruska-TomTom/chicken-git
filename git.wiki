@@ -512,41 +512,80 @@ Removes the object at the given {{path}} from the {{tree-builder}}'s tree.
 Writes the {{tree-builder}}'s tree to the given {{repository}}, modifying the
 on-disk repository on success. The resulting {{tree}} is returned.
 
-==== Tree Diff
+==== Diff
 
-<record>tree-diff</record>
-<procedure>(tree-diff? obj) => boolean</procedure>
+<record>diff</record>
+<procedure>(diff? obj) => boolean</procedure>
+<record>diff-file</record>
+<procedure>(diff-file? obj) => boolean</procedure>
 
-A {{tree-diff}} is the difference of a single file across two Git {{tree}}s.
-Each tree-diff has a path, status, and a pair of {{oid}}s and Unix file
-attributes (for the older & newer file, respectively).
+A {{diff}} is the difference in a single file between two Git {{tree}}s. Each
+diff has a status, similarity, and a pair of {{diff-file}}s for the old and new
+files, respectively.
 
-<procedure>(tree-diff repository tree1 tree2) => list</procedure>
+Each diff-file has an {{oid}}, {{path}}, and {{mode}} (Unix file attributes).
 
-Compares two {{tree}}s in the given {{repository}}, returning a list of
-{{tree-diff}} objects for every difference between them. {{#f}} may be used to
-represent an empty tree, in which case all resulting {{tree-diff}}s will have
-status {{added}} or {{deleted}}.
+<procedure>(diff repository [tree object]) => list</procedure>
 
-<procedure>(tree-diff-status tree-diff) => symbol</procedure>
+Compares a tree to another object in the given {{repository}}, or compares a
+repository's working directory to its index if no other arguments are given.
+Returns a list of {{diff}} objects is for every difference between them.
 
-Returns a symbol representing the diff status of a {{tree-diff}}, which will be
-one of {{added}}, {{deleted}}, or {{modified}}.
+{{object}} may be an {{index}}, {{tree}}, or one of the symbols {{'index}} or
+{{'workdir}} to specify a diff target indirectly.
 
-<procedure>(tree-diff-path tree-diff)</procedure>
+<procedure>(diff-status diff) => symbol</procedure>
 
-Returns the path of the given {{tree-diff}}, relative to the repository's
-root.
+Returns a symbol representing the status of a {{diff}}, which will be
+one of the following symbols:
 
-<procedure>(tree-diff-old-id tree-diff) => oid</procedure>
-<procedure>(tree-diff-new-id tree-diff) => oid</procedure>
+    modified
+    added
+    deleted
+    modified
+    renamed
+    copied
+    ignored
+    untracked
 
-Returns the older or newer {{oid}} of the given {{tree-diff}}.
+<procedure>(diff-similarity diff) => integer</procedure>
 
-<procedure>(tree-diff-old-attr tree-diff) => int</procedure>
-<procedure>(tree-diff-new-attr tree-diff) => int</procedure>
+Returns an integer value from 0 to 100 representing the similarity between a
+{{diff}}'s old and new files, high values being representing greater
+similarity.
 
-Returns the older or newer Unix file attributes of the given {{tree-diff}}.
+<procedure>(diff-old-file diff)</procedure>
+<procedure>(diff-new-file diff)</procedure>
+
+Returns the {{diff-file}} object for the old and new file of the given
+{{diff}}, respectively. If the file is added or deleted, {{#f}} will be
+returned for the diff's old or new file, respectively.
+
+<procedure>(diff-file-path diff-file) => string</procedure>
+
+Returns the path of the given {{diff-file}}, relative to the repository's root.
+In the case of a rename, the paths of the old and new {{diff-file}} for a given
+{{diff}} may be different.
+
+<procedure>(tree-file-id diff-file) => oid</procedure>
+
+Returns the {{oid}} of the given {{diff-file}}.
+
+<procedure>(diff-file-mode tree-diff) => int</procedure>
+
+Returns the Unix file attributes of the given {{diff-file}}.
+
+<procedure>(diff-old-id diff) => oid</procedure>
+<procedure>(diff-new-id diff) => oid</procedure>
+<procedure>(diff-old-mode diff) => int</procedure>
+<procedure>(diff-new-mode diff) => int</procedure>
+<procedure>(diff-old-path diff) => string</procedure>
+<procedure>(diff-new-path diff) => string</procedure>
+
+Convenience procedures for accessing the fields of a {{diff}} objects's old &
+new {{diff-file}}s.
+
+    (diff-old-id diff) => (diff-file-id (diff-old-file diff))
 
 ==== Status
 

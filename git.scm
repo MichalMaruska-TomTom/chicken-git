@@ -35,7 +35,10 @@
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-id tree-diff-new-id tree-diff-path tree-diff-status
+   diff? diff diff-similarity diff-status diff-path diff-old-file diff-new-file
+   diff-file? diff-file-id diff-file-mode diff-file-path diff-file-size diff-file-flags
+   diff-old-id diff-new-id diff-old-mode diff-new-mode diff-old-path diff-new-path
+   diff-old-size diff-new-size diff-old-flags diff-new-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -652,6 +655,13 @@
                (else entry)))))
        (iota (tree-entrycount tree))))
 
+(define (tree-walk tree fn . mode)
+  (git-tree-walk
+    (tree->pointer tree)
+    (lambda (path te*)
+      (fn path (pointer->tree-entry te*)))
+    (optional mode 'post)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Builders
 
@@ -686,42 +696,79 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Diffs
 
-;; Flat record type for diff delta and file info.
-;; TODO Should follow libgit2 structures here.
 (define-git-record-type
-  (diff status similarity old-oid new-oid old-mode new-mode old-path new-path old-size new-size)
-  (format "#<tree-diff ~S>" (diff-new-path diff)))
+  (diff-file oid mode path size flags)
+  (format "#<diff-file ~S>" (diff-file-path diff-file)))
 
-(define tree-diff? diff?)
-(define tree-diff-status diff-status)
+;; The `diff-delta` record is renamed to just `diff`.
+(define-git-record-type
+  (diff-delta old-file new-file status similarity binary)
+  (format "#<diff ~S>" (diff-file-path (diff-new-file diff-delta))))
 
-(define (tree-diff-old-id diff) (pointer->oid (diff-old-oid diff)))
-(define (tree-diff-new-id diff) (pointer->oid (diff-new-oid diff)))
+(define (diff-file-id df) (pointer->oid (diff-file-oid df)))
 
-;; Compatability.
-(define tree-diff-path     diff-new-path)
-(define tree-diff-old-attr diff-old-mode)
-(define tree-diff-new-attr diff-new-mode)
+(define (diff-path diff) (diff-file-path (or (diff-new-file diff) (diff-old-file diff))))
+(define (diff-old-file diff) (and-let* ((f (git-diff-delta-old-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
+(define (diff-new-file diff) (and-let* ((f (git-diff-delta-new-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
 
-(define (tree-diff repo tree1 tree2)
+(define diff-status     diff-delta-status)
+(define diff-similarity diff-delta-similarity)
+(define diff-binary?    diff-delta-binary)
+(define diff?           diff-delta?)
+
+(define (build-diff-list diff-ptrs)
   (let ((acc (list 0)))
     (git-diff-foreach
       (lambda (diff)
         (set-cdr! acc
-          (cons (pointer->diff diff)
+          (cons (pointer->diff-delta diff)
                 (cdr acc))))
-      (git-diff-tree-to-tree
-        (repository->pointer repo)
-        (tree->pointer tree1)
-        (tree->pointer tree2)))
+      diff-ptrs)
     (cdr acc)))
 
-(define (tree-walk tree fn . mode)
-  (git-tree-walk
-    (tree->pointer tree)
-    (lambda (path te*)
-      (fn path (pointer->tree-entry te*)))
-    (optional mode 'post)))
+(define diff
+  (case-lambda
+    ((repo)
+     (build-diff-list
+       (git-diff-workdir-to-index
+         (repository->pointer repo))))
+    ((repo tree1 tree2/type)
+     (build-diff-list
+       (let ((repo*  (repository->pointer repo))
+             (tree1* (tree->pointer tree1)))
+         (cond ((tree? tree2/type)
+                (git-diff-tree-to-tree
+                  repo*
+                  tree1*
+                  (tree->pointer tree2/type)))
+               ((eq? tree2/type 'workdir)
+                (git-diff-workdir-to-tree repo* tree1*))
+               ((or (eq? tree2/type 'index) (index? tree2/type))
+                (git-diff-index-to-tree repo* tree1*))
+               (else
+                (git-git-error
+                 'diff
+                  "Undiffable object"
+                  tree2/type))))))))
+
+;; Convenience accessors for diff-delta's old/new diff-file slots.
+;; Mostly for compatability, will probably be removed.
+(define-syntax define-diff-file-getter
+  (er-macro-transformer
+    (lambda (e r c)
+      (let ((slot (cadr e)))
+        `(begin
+           ,@(map (lambda (old/new)
+                    `(define (,(s+ 'diff- old/new '- slot) diff)
+                       (and-let* ((f (,(s+ 'diff- old/new '-file) diff)))
+                         (,(s+ 'diff-file- slot) f))))
+                  '(old new)))))))
+
+(define-diff-file-getter id)
+(define-diff-file-getter mode)
+(define-diff-file-getter path)
+(define-diff-file-getter size)
+(define-diff-file-getter flags)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs

@@ -311,8 +311,6 @@
   ((untracked diff/untracked)  GIT_DELTA_UNTRACKED))
 
 (define-foreign-record-type (diff-options git_diff_options)
-  (constructor: %make-diff-options)
-  (destructor:  diff-options-free)
   (unsigned-int32    flags           diff-options-flags           diff-options-flags-set!)
   (unsigned-short    context_lines   diff-options-context-lines   diff-options-context-lines-set!)
   (unsigned-short    interhunk_lines diff-options-interhunk-lines diff-options-interhunk-lines-set!)
@@ -327,32 +325,12 @@
   (off-t          size   diff-file-size)
   (unsigned-int   flags  diff-file-flags))
 
-(define-foreign-record-type (diff git_diff_delta)
-  (constructor: %make-diff)
-  (destructor:  diff-free)
-  ((struct diff-file) old_file   diff-old-file)
-  ((struct diff-file) new_file   diff-new-file)
-  (delta              status     diff-status)
-  (unsigned-int       similarity diff-similarity)
-  (int                binary     diff-binary))
-
-;; For simplicity, flatten the git_diff_delta and git_diff_file APIs.
-(define (diff-old-oid delta)   (diff-file-oid (diff-old-file delta)))
-(define (diff-new-oid delta)   (diff-file-oid (diff-new-file delta)))
-(define (diff-old-mode delta)  (diff-file-mode (diff-old-file delta)))
-(define (diff-new-mode delta)  (diff-file-mode (diff-new-file delta)))
-(define (diff-old-path delta)  (diff-file-path (diff-old-file delta)))
-(define (diff-new-path delta)  (diff-file-path (diff-new-file delta)))
-(define (diff-old-size delta)  (diff-file-size (diff-old-file delta)))
-(define (diff-new-size delta)  (diff-file-size (diff-new-file delta)))
-(define (diff-old-flags delta) (diff-file-flags (diff-old-file delta)))
-(define (diff-new-flags delta) (diff-file-flags (diff-new-file delta)))
-
-(define (make-diff)
-  (set-finalizer! (%make-diff) diff-free))
-
-(define (make-diff-options)
-  (set-finalizer! (%make-diff-options) diff-options-free))
+(define-foreign-record-type (diff-delta git_diff_delta)
+  ((struct diff-file) old_file   diff-delta-old-file)
+  ((struct diff-file) new_file   diff-delta-new-file)
+  (delta              status     diff-delta-status)
+  (unsigned-int       similarity diff-delta-similarity)
+  (int                binary     diff-delta-binary))
 
 (define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
 
@@ -365,7 +343,7 @@
            ((foreign-lambda int <cfun>
              repository diff-options <type> ... (c-pointer diff-list))
              repo       #f           <arg>  ... (location diffs)))
-         diffs)))))
+         (set-finalizer! diffs diff-list-free))))))
 
 (define/diff diff-tree-to-tree     (git_diff_tree_to_tree (tree old) (tree new)))
 (define/diff diff-index-to-tree    (git_diff_index_to_tree (tree old)))
@@ -374,20 +352,20 @@
 
 (define/retval diff-merge (git_diff_merge (diff-list onto) (diff-list from)))
 
-(define-external (diff_file_fn (scheme-object fn) (diff diff) (float progress)) int
+(define-external (diff_file_fn (scheme-object fn) (diff-delta diff) (float progress)) int
   (fn diff))
 
 (define (diff-foreach fn diffs)
   (guard-errors diff-foreach
     ((foreign-safe-lambda int git_diff_foreach
-      diff-list scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
-      diffs     fn            (location diff_file_fn)             #f        #f)))
+      diff-list scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      diffs     fn            (location diff_file_fn)                   #f        #f)))
 
 (define (diff-blobs old new fn diffs)
   (guard-errors diff-blobs
     ((foreign-safe-lambda int git_diff_blobs
-      blob* blob* diff-options scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
-      old   new   #f           fn            (location diff_file_fn)             #f        #f)))
+      blob* blob* diff-options scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      old   new   #f           fn            (location diff_file_fn)                   #f        #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
