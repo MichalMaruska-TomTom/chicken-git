@@ -9,12 +9,13 @@
 
 (module git
   (object-id object-type object-sha
-   string->oid oid->string oid->path oid?
+   string->oid oid->string oid->path oid? merge-base
    repository? create-repository repository-open
    repository-path repository-ref repository-empty? repository-bare?
    reference? reference references create-reference reference-resolve
    reference-id reference-name reference-target reference-type
    reference-target-set reference-rename reference-delete
+   branches create-branch branch-rename branch-delete
    commit? commit commits commits-fold create-commit commit-id
    commit-message commit-message-encoding
    commit-time commit-time-offset commit-parentcount
@@ -30,11 +31,14 @@
    odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
-   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target
-   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
+   tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
+   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
-   tree-diff tree-diff-old-attr tree-diff-new-attr tree-diff-old-id tree-diff-new-id tree-diff-path tree-diff-status
+   diff? diff diff-similarity diff-status diff-path diff-old-file diff-new-file
+   diff-file? diff-file-id diff-file-mode diff-file-path diff-file-size diff-file-flags
+   diff-old-id diff-new-id diff-old-mode diff-new-mode diff-old-path diff-new-path
+   diff-old-size diff-new-size diff-old-flags diff-new-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
   (import scheme
@@ -135,6 +139,9 @@
     ((commit) (pointer->commit ptr))
     ((tag)    (pointer->tag ptr))
     ((tree)   (pointer->tree ptr))))
+
+(define (merge-base r a b)
+  (pointer->oid (git-merge-base r (oid->pointer a) (oid->pointer b))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Repositories
@@ -270,6 +277,33 @@
 
 (define (reference-rename ref name #!optional force)
   (git-reference-rename (reference->pointer ref) name force))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Branches
+
+;; I'm changing branch-move to branch-rename here, perhaps gratuitously.
+;; I'm just so sick of typing `git branch rename foo bar` and having
+;; git whine at me, consider this payback.
+(define (branch-rename repo old new #!optional force)
+  (git-branch-move (repository->pointer repo) old new force))
+
+;; XXX Returns a reference.
+(define (create-branch repo name target #!optional force)
+  (git-branch-create
+    (repository->pointer repo)
+    name
+    (object->pointer target)
+    force)
+  ;; I think branches are only ever under refs/heads,
+  ;; so this should be OK to do... Right?
+  (reference repo (string-append "refs/heads/" name)))
+
+(define (branches repo #!optional (type 'local))
+  (map (lambda (ref) (reference repo ref))
+       (git-branch-list (repository->pointer repo) type)))
+
+(define (branch-delete repo name #!optional (type 'local))
+  (git-branch-delete (repository->pointer repo) name type))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Commits
@@ -535,6 +569,7 @@
             (cons (tag repo (reference-id (car tags))) acc)
             ((git) acc))))))
 
+(define (tag-peel tag) (pointer->object (git-tag-peel (tag->pointer tag))))
 (define (tag-tagger tag) (pointer->signature (git-tag-tagger (tag->pointer tag))))
 (define (tag-target tag) (pointer->object (git-tag-target (tag->pointer tag))))
 (define (tag-delete tag)
@@ -620,6 +655,13 @@
                (else entry)))))
        (iota (tree-entrycount tree))))
 
+(define (tree-walk tree fn . mode)
+  (git-tree-walk
+    (tree->pointer tree)
+    (lambda (path te*)
+      (fn path (pointer->tree-entry te*)))
+    (optional mode 'post)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Builders
 
@@ -654,35 +696,79 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Diffs
 
-;; Flat record type for diff delta and file info.
-;; TODO Should follow libgit2 structures here.
 (define-git-record-type
-  (diff status similarity old-oid new-oid old-mode new-mode old-path new-path old-size new-size)
-  (format "#<tree-diff ~S>" (diff-new-path diff)))
+  (diff-file oid mode path size flags)
+  (format "#<diff-file ~S>" (diff-file-path diff-file)))
 
-(define tree-diff? diff?)
-(define tree-diff-status diff-status)
+;; The `diff-delta` record is renamed to just `diff`.
+(define-git-record-type
+  (diff-delta old-file new-file status similarity binary)
+  (format "#<diff ~S>" (diff-file-path (diff-new-file diff-delta))))
 
-(define (tree-diff-old-id diff) (pointer->oid (diff-old-oid diff)))
-(define (tree-diff-new-id diff) (pointer->oid (diff-new-oid diff)))
+(define (diff-file-id df) (pointer->oid (diff-file-oid df)))
 
-;; Compatability.
-(define tree-diff-path     diff-new-path)
-(define tree-diff-old-attr diff-old-mode)
-(define tree-diff-new-attr diff-new-mode)
+(define (diff-path diff) (diff-file-path (or (diff-new-file diff) (diff-old-file diff))))
+(define (diff-old-file diff) (and-let* ((f (git-diff-delta-old-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
+(define (diff-new-file diff) (and-let* ((f (git-diff-delta-new-file (diff-delta->pointer diff)))) (pointer->diff-file f)))
 
-(define (tree-diff repo tree1 tree2)
+(define diff-status     diff-delta-status)
+(define diff-similarity diff-delta-similarity)
+(define diff-binary?    diff-delta-binary)
+(define diff?           diff-delta?)
+
+(define (build-diff-list diff-ptrs)
   (let ((acc (list 0)))
     (git-diff-foreach
       (lambda (diff)
         (set-cdr! acc
-          (cons (pointer->diff diff)
+          (cons (pointer->diff-delta diff)
                 (cdr acc))))
-      (git-diff-tree-to-tree
-        (repository->pointer repo)
-        (and tree1 (tree->pointer tree1))
-        (and tree2 (tree->pointer tree2))))
+      diff-ptrs)
     (cdr acc)))
+
+(define diff
+  (case-lambda
+    ((repo)
+     (build-diff-list
+       (git-diff-workdir-to-index
+         (repository->pointer repo))))
+    ((repo tree1 tree2/type)
+     (build-diff-list
+       (let ((repo*  (repository->pointer repo))
+             (tree1* (tree->pointer tree1)))
+         (cond ((tree? tree2/type)
+                (git-diff-tree-to-tree
+                  repo*
+                  tree1*
+                  (tree->pointer tree2/type)))
+               ((eq? tree2/type 'workdir)
+                (git-diff-workdir-to-tree repo* tree1*))
+               ((or (eq? tree2/type 'index) (index? tree2/type))
+                (git-diff-index-to-tree repo* tree1*))
+               (else
+                (git-git-error
+                 'diff
+                  "Undiffable object"
+                  tree2/type))))))))
+
+;; Convenience accessors for diff-delta's old/new diff-file slots.
+;; Mostly for compatability, will probably be removed.
+(define-syntax define-diff-file-getter
+  (er-macro-transformer
+    (lambda (e r c)
+      (let ((slot (cadr e)))
+        `(begin
+           ,@(map (lambda (old/new)
+                    `(define (,(s+ 'diff- old/new '- slot) diff)
+                       (and-let* ((f (,(s+ 'diff- old/new '-file) diff)))
+                         (,(s+ 'diff-file- slot) f))))
+                  '(old new)))))))
+
+(define-diff-file-getter id)
+(define-diff-file-getter mode)
+(define-diff-file-getter path)
+(define-diff-file-getter size)
+(define-diff-file-getter flags)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Configs

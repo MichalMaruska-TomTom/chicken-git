@@ -149,6 +149,31 @@
 (define blob*-create-frombuffer (foreign-lambda int git_blob_create_frombuffer oid repository c-string unsigned-int))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; branch.h
+
+(define-foreign-enum-type (btype int)
+  (btype->int int->btype)
+  ((local  btype/local)  GIT_BRANCH_LOCAL)
+  ((remote btype/remote) GIT_BRANCH_REMOTE))
+
+(define (branch-create repo name target force)
+  (let ((id (make-oid)))
+    (guard-errors branch-create
+      ((foreign-lambda int git_branch_create
+         oid repository c-string object bool)
+         id  repo       name     target force))
+    id))
+
+(define (branch-list repo flags)
+  (let ((sa (make-strarray)))
+    (guard-errors branch-list
+      ((foreign-lambda int git_branch_list strarray repository btype) sa repo flags))
+    (strarray-strings sa)))
+
+(define/retval branch-delete (git_branch_delete (repository repo) (c-string name) (btype type)))
+(define/retval branch-move   (git_branch_move   (repository repo) (c-string old) (c-string new) (bool force)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; commit.h
 
 (define/allocate commit commit-lookup
@@ -286,8 +311,6 @@
   ((untracked diff/untracked)  GIT_DELTA_UNTRACKED))
 
 (define-foreign-record-type (diff-options git_diff_options)
-  (constructor: %make-diff-options)
-  (destructor:  diff-options-free)
   (unsigned-int32    flags           diff-options-flags           diff-options-flags-set!)
   (unsigned-short    context_lines   diff-options-context-lines   diff-options-context-lines-set!)
   (unsigned-short    interhunk_lines diff-options-interhunk-lines diff-options-interhunk-lines-set!)
@@ -302,51 +325,47 @@
   (off-t          size   diff-file-size)
   (unsigned-int   flags  diff-file-flags))
 
-(define-foreign-record-type (diff git_diff_delta)
-  (constructor: %make-diff)
-  (destructor:  diff-free)
-  ((struct diff-file) old_file   diff-old-file)
-  ((struct diff-file) new_file   diff-new-file)
-  (delta              status     diff-status)
-  (unsigned-int       similarity diff-similarity)
-  (int                binary     diff-binary))
-
-;; For simplicity, flatten the git_diff_delta and git_diff_file APIs.
-(define (diff-old-oid delta)   (diff-file-oid (diff-old-file delta)))
-(define (diff-new-oid delta)   (diff-file-oid (diff-new-file delta)))
-(define (diff-old-mode delta)  (diff-file-mode (diff-old-file delta)))
-(define (diff-new-mode delta)  (diff-file-mode (diff-new-file delta)))
-(define (diff-old-path delta)  (diff-file-path (diff-old-file delta)))
-(define (diff-new-path delta)  (diff-file-path (diff-new-file delta)))
-(define (diff-old-size delta)  (diff-file-size (diff-old-file delta)))
-(define (diff-new-size delta)  (diff-file-size (diff-new-file delta)))
-(define (diff-old-flags delta) (diff-file-flags (diff-old-file delta)))
-(define (diff-new-flags delta) (diff-file-flags (diff-new-file delta)))
-
-(define (make-diff)
-  (set-finalizer! (%make-diff) diff-free))
-
-(define (make-diff-options)
-  (set-finalizer! (%make-diff-options) diff-options-free))
+(define-foreign-record-type (diff-delta git_diff_delta)
+  ((struct diff-file) old_file   diff-delta-old-file)
+  ((struct diff-file) new_file   diff-delta-new-file)
+  (delta              status     diff-delta-status)
+  (unsigned-int       similarity diff-delta-similarity)
+  (int                binary     diff-delta-binary))
 
 (define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
 
-(define (diff-tree-to-tree repo old new)
-  (let-location ((diffs diff-list))
-    (guard-errors diff-tree-to-tree
-      ((foreign-lambda int git_diff_tree_to_tree
-        repository diff-options tree tree (c-pointer diff-list))
-        repo       #f           old  new  (location diffs)))
-    diffs))
+(define-syntax define/diff
+  (syntax-rules ()
+    ((_ <name> (<cfun> (<type> <arg>) ...))
+     (define (<name> repo <arg> ...)
+       (let-location ((diffs diff-list))
+         (guard-errors <name>
+           ((foreign-lambda int <cfun>
+             repository diff-options <type> ... (c-pointer diff-list))
+             repo       #f           <arg>  ... (location diffs)))
+         (set-finalizer! diffs diff-list-free))))))
 
-(define-external (diff_file_fn (scheme-object fn) (diff diff) (float progress)) int
+(define/diff diff-tree-to-tree     (git_diff_tree_to_tree (tree old) (tree new)))
+(define/diff diff-index-to-tree    (git_diff_index_to_tree (tree old)))
+(define/diff diff-workdir-to-tree  (git_diff_workdir_to_tree (tree old)))
+(define/diff diff-workdir-to-index (git_diff_workdir_to_index))
+
+(define/retval diff-merge (git_diff_merge (diff-list onto) (diff-list from)))
+
+(define-external (diff_file_fn (scheme-object fn) (diff-delta diff) (float progress)) int
   (fn diff))
 
 (define (diff-foreach fn diffs)
   (guard-errors diff-foreach
     ((foreign-safe-lambda int git_diff_foreach
-      diff-list scheme-object (function int (diff scheme-object)) c-pointer c-pointer)
-      diffs     fn            (location diff_file_fn)             #f        #f)))
+      diff-list scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      diffs     fn            (location diff_file_fn)                   #f        #f)))
+
+(define (diff-blobs old new fn diffs)
+  (guard-errors diff-blobs
+    ((foreign-safe-lambda int git_diff_blobs
+      blob* blob* diff-options scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
+      old   new   #f           fn            (location diff_file_fn)                   #f        #f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
@@ -412,6 +431,15 @@
 (define index-get-unmerged-bypath  (foreign-lambda index-entry-unmerged git_index_get_unmerged_bypath index c-string))
 (define index-get-unmerged-byindex (foreign-lambda index-entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
 (define index-entry-stage          (foreign-lambda int git_index_entry_stage index-entry))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; merge.h
+
+(define (merge-base repo a b)
+  (let ((id (make-oid)))
+    (guard-errors merge-base
+      ((foreign-lambda int git_merge_base oid repository oid oid) id repo a b))
+    id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; object.h
@@ -677,8 +705,8 @@
 (define/allocate tag tag-lookup
   (git_tag_lookup (repository repo) (oid id)))
 
-(define/allocate object tag-target
-  (git_tag_target (tag t)))
+(define/allocate object tag-target (git_tag_target (tag t)))
+(define/allocate object tag-peel   (git_tag_peel (tag t)))
 
 (define tag-free       (foreign-lambda void git_tag_free tag))
 (define tag-id         (foreign-lambda oid git_tag_id tag))
@@ -755,6 +783,20 @@
       ((foreign-lambda int git_treebuilder_write oid repository tree-builder) id repo tb))
     id))
 
-;; Maybe TODO tree-builder-filter tree-walk
+(define-foreign-enum-type (treewalk-mode int)
+  (treewalk-mode->int int->treewalk-mode)
+  ((pre  treewalk-mode/pre)  GIT_TREEWALK_PRE)
+  ((post treewalk-mode/post) GIT_TREEWALK_POST))
+
+(define-external (treewalk_cb (c-string root) (tree-entry te) (scheme-object fn)) int
+  (fn root te))
+
+(define (tree-walk tr fn mode)
+  (guard-errors tree-walk
+    ((foreign-safe-lambda int git_tree_walk
+      tree (function int (c-string tree-entry scheme-object)) treewalk-mode scheme-object)
+      tr   (location treewalk_cb)                             mode          fn)))
+
+;; Maybe TODO tree-builder-filter
 
 )
