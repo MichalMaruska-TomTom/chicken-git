@@ -571,7 +571,7 @@ In the case of a rename, the paths of the old and new {{diff-file}} for a given
 
 Returns the {{oid}} of the given {{diff-file}}.
 
-<procedure>(diff-file-mode tree-diff) => int</procedure>
+<procedure>(diff-file-mode diff-file) => int</procedure>
 
 Returns the Unix file attributes of the given {{diff-file}}.
 
