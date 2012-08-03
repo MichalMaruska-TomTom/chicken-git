@@ -31,7 +31,7 @@
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
-   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree
+   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    diff? diff diff-similarity diff-status diff-path diff-old-file diff-new-file
@@ -578,9 +578,6 @@
       (repository->pointer repo)
       (oid->pointer (->oid ref)))))
 
-(define (tree-subtree tree path)
-  (pointer->tree (git-tree-get-subtree (tree->pointer tree) path)))
-
 (define (tree-ref tree key)
   (pointer->tree-entry
     (let ((tree* (tree->pointer tree)))
@@ -589,9 +586,7 @@
             ((string? key)
              (or (git-tree-entry-byname tree* key)
                  (condition-case
-                   (git-tree-entry-byname
-                     (git-tree-get-subtree tree* key)
-                     (pathname-strip-directory key))
+                   (git-tree-entry-bypath tree* key)
                    ((git) #f))))
             (else
              (git-git-error 'tree-ref "Invalid key" key))))))

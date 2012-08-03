@@ -727,8 +727,8 @@
 (define tree-entry-id         (foreign-lambda oid git_tree_entry_id tree-entry))
 (define tree-entry-type       (foreign-lambda otype git_tree_entry_type tree-entry))
 
-(define/allocate tree tree-get-subtree
-  (git_tree_get_subtree (tree tr) ((const c-string) path)))
+(define/allocate tree-entry tree-entry-bypath
+  (git_tree_entry_bypath (tree tr) ((const c-string) path)))
 
 (define/allocate object tree-entry-to-object
   (git_tree_entry_to_object (repository repo) (tree-entry entry)))
