@@ -41,14 +41,13 @@
    diff-old-size diff-new-size diff-old-flags diff-new-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
-  (import scheme
+  (import scheme lolevel
     (only srfi-1 iota)
     (only extras format)
     (only posix current-directory)
     (only files normalize-pathname make-pathname pathname-strip-directory)
     (except chicken repository-path)
-    (prefix git-lolevel git-)
-    (only lolevel record->vector number-of-bytes move-memory! tag-pointer pointer-tag))
+    (prefix git-lolevel git-))
   (require-library srfi-1 extras posix files lolevel git-lolevel)
 
 (define-for-syntax (s+ . args)
@@ -84,6 +83,13 @@
                           ((id) `(pointer->oid (,(s+ 'git- getter) (,->pointer obj))))
                           (else `(,(s+ 'git- getter) (,->pointer obj)))))))
                   attr))))))
+
+(define (with-static-object object proc)
+  (let ((object* #f))
+    (dynamic-wind
+     (lambda () (set! object* (object-evict object)))
+     (lambda () (proc object*))
+     (lambda () (object-unevict object*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generics & OIDs
@@ -656,11 +662,13 @@
        (iota (tree-entrycount tree))))
 
 (define (tree-walk tree fn . mode)
-  (git-tree-walk
-    (tree->pointer tree)
-    (lambda (path te*)
-      (fn path (pointer->tree-entry te*)))
-    (optional mode 'post)))
+  (with-static-object tree
+   (lambda (object)
+     (git-tree-walk
+      (object->pointer object)
+      (lambda (path te*)
+        (fn path (pointer->tree-entry te*)))
+      (optional mode 'post)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Builders
