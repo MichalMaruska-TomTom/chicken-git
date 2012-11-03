@@ -335,35 +335,34 @@
       (oid->pointer (->oid ref)))))
 
 (define (commits-fold kons knil repo #!key initial (hide '()) (sort 'none))
-  (call-with-current-continuation
-    (lambda (return)
-      (let ((walker #f))
-        (dynamic-wind
-          (lambda ()
-            (set! walker
-              (git-revwalk-new (repository->pointer repo))))
-          (lambda ()
-            ;; Sort mode, one of '(none topo time rev)
-            (git-revwalk-sorting walker sort)
-            ;; Set hidden commits. These exclude
-            ;; full branches from the traversal,
-            ;; rather than just the commits.
-            (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
-                      (map oid->pointer (map ->oid hide)))
-            ;; Set initial revision.
-            ;; Use HEAD if none is given (allowed? safe?).
-            ;; HEAD should always exist if there's at least one commit, so...
-            (git-revwalk-push walker
-              (condition-case
-                (oid->pointer
-                  (->oid (or initial (reference repo "HEAD"))))
-                ((git) (return '()))))
-            (let lp ((state knil))
-              (condition-case
-                (lp (kons (commit repo (pointer->oid (git-revwalk-next walker))) state))
-                ((git) state))))
-          (lambda ()
-            (git-revwalk-free walker)))))))
+  (let ((walker #f))
+    (dynamic-wind
+     (lambda ()
+       (set! walker
+         (git-revwalk-new (repository->pointer repo))))
+     (lambda ()
+       ;; Sort mode, one of '(none topo time rev)
+       (git-revwalk-sorting walker sort)
+       ;; Set hidden commits. These exclude
+       ;; full branches from the traversal,
+       ;; rather than just the commits.
+       (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
+                 (map oid->pointer (map ->oid hide)))
+       ;; Set initial revision.
+       ;; Use HEAD if none is given (allowed? safe?).
+       ;; HEAD should always exist if there's at least one commit, so...
+       (condition-case
+         (begin
+           (git-revwalk-push walker
+            (oid->pointer
+             (->oid (or initial (reference repo "HEAD")))))
+           (let lp ((state knil))
+             (condition-case
+               (lp (kons (commit repo (pointer->oid (git-revwalk-next walker))) state))
+               ((git) state))))
+         ((git) knil)))
+     (lambda ()
+       (git-revwalk-free walker)))))
 
 (define (commits repo . rest)
   (apply commits-fold cons '() repo rest))
