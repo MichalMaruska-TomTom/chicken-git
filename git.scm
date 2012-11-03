@@ -12,8 +12,8 @@
    string->oid oid->string oid->path oid? merge-base
    repository? create-repository repository-open
    repository-path repository-ref repository-empty? repository-bare?
-   reference? reference references create-reference reference-resolve
-   reference-id reference-name reference-target reference-type
+   reference? reference references reference-for-each create-reference
+   reference-id reference-name reference-target reference-type reference-resolve
    reference-target-set reference-rename reference-delete
    branches create-branch branch-rename branch-delete
    commit? commit commits commits-fold create-commit commit-id
@@ -283,6 +283,9 @@
 
 (define (reference-rename ref name #!optional force)
   (git-reference-rename (reference->pointer ref) name force))
+
+(define (reference-for-each fn repo #!optional (type 'listall))
+  (git-reference-foreach (repository->pointer repo) type (lambda (name) (fn (reference repo name)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Branches

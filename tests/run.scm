@@ -217,7 +217,14 @@
             (test-assert (reference repo (reference-name ref)))
             (let ((tgt (reference repo (reference-target ref))))
               (test 'oid (reference-type tgt))
-              (test-assert (commit repo (reference-id tgt))))))
+              (test-assert (commit repo (reference-id tgt))))
+            (let ((refs '()))
+              (reference-for-each
+               (lambda (ref)
+                 (test #t (reference? ref))
+                 (set! refs (cons (reference-name ref) refs)))
+               repo)
+              (test #t (equal? '("refs/heads/mimsy" "refs/heads/master") refs)))))
 
         (test-group "reference deletion"
           (test-error (reference-delete 0))
