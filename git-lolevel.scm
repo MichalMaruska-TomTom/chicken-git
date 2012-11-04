@@ -7,7 +7,7 @@
 ;; See git.scm for a cleaner, high-level API.
 
 (module git-lolevel *
-  (import scheme lolevel foreign foreigners
+  (import scheme lolevel foreign foreigners srfi-69
     (except chicken repository-path)
     (only srfi-13 string-index))
   (require-library srfi-13 lolevel)
@@ -51,6 +51,33 @@
        (if (not (guard-errors '<name>
                   ((foreign-lambda int <cfun> <atype> ...) <arg> ...)))
          #f))))) ;; Ignored, the if just forces a void return.
+
+;;;
+;;; Callback management.
+;;;
+;;; We have to make sure procedures passed to C as callbacks aren't moved by
+;;; the GC while in use, so we store them in a lookup table and pass integer
+;;; keys to the libgit2 functions that need them.
+;;;
+
+(define-values (callback-lookup callback-unregister! callback-register!)
+  (let ((callback-index 0)
+        (callback-table (make-hash-table)))
+    (values
+     (lambda (i) (hash-table-ref callback-table i))
+     (lambda (i) (hash-table-delete! callback-table i))
+     (lambda (c)
+       (let ((index callback-index))
+         (hash-table-set! callback-table index c)
+         (set! callback-index (+ index 1))
+         index)))))
+
+(define (with-callback c proc)
+  (let ((callback #f))
+    (dynamic-wind
+     (lambda () (set! callback (callback-register! c)))
+     (lambda () (proc callback))
+     (lambda () (callback-unregister! callback)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; git2.h
@@ -298,6 +325,7 @@
 ;; diff.h
 
 (define-foreign-type diff-list (c-pointer "git_diff_list"))
+(define-foreign-type diff-file-fn (c-pointer "git_diff_file_fn"))
 
 (define-foreign-enum-type (delta int)
   (delta->int int->delta)
@@ -353,19 +381,23 @@
 (define/retval diff-merge (git_diff_merge (diff-list onto) (diff-list from)))
 
 (define-external (diff_file_fn (scheme-object fn) (diff-delta diff) (float progress)) int
-  (fn diff))
+  ((callback-lookup fn) diff))
 
 (define (diff-foreach fn diffs)
-  (guard-errors diff-foreach
-    ((foreign-safe-lambda int git_diff_foreach
-      diff-list scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
-      diffs     fn            (location diff_file_fn)                   #f        #f)))
+  (with-callback fn
+   (lambda (callback)
+     (guard-errors diff-foreach
+      ((foreign-safe-lambda int git_diff_foreach
+        diff-list scheme-object diff-file-fn            c-pointer c-pointer)
+        diffs     callback      (location diff_file_fn) #f        #f)))))
 
 (define (diff-blobs old new fn diffs)
-  (guard-errors diff-blobs
-    ((foreign-safe-lambda int git_diff_blobs
-      blob* blob* diff-options scheme-object (function int (diff-delta scheme-object)) c-pointer c-pointer)
-      old   new   #f           fn            (location diff_file_fn)                   #f        #f)))
+  (with-callback fn
+   (lambda (callback)
+     (guard-errors diff-blobs
+      ((foreign-safe-lambda int git_diff_blobs
+        blob* blob* diff-options scheme-object diff-file-fn            c-pointer c-pointer)
+        old   new   #f           callback      (location diff_file_fn) #f        #f)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
@@ -594,8 +626,16 @@
       ((foreign-lambda int git_reference_list strarray repository rtype) sa repo flags))
     (strarray-strings sa)))
 
-;; Maybe TODO foreach.
-;; Probably not.
+(define-external (reference_foreach_cb ((const c-string) name) (scheme-object fn)) int
+  ((callback-lookup fn) name))
+
+(define (reference-foreach repo flags fn)
+  (with-callback fn
+   (lambda (callback)
+     (guard-errors reference-foreach
+      ((foreign-safe-lambda int git_reference_foreach
+        repository rtype (function int ((const c-string) scheme-object)) scheme-object)
+        repo       flags (location reference_foreach_cb)                 callback)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
@@ -789,13 +829,15 @@
   ((post treewalk-mode/post) GIT_TREEWALK_POST))
 
 (define-external (treewalk_cb (c-string root) (tree-entry te) (scheme-object fn)) int
-  (fn root te))
+  ((callback-lookup fn) root te))
 
-(define (tree-walk tr fn mode)
-  (guard-errors tree-walk
-    ((foreign-safe-lambda int git_tree_walk
-      tree (function int (c-string tree-entry scheme-object)) treewalk-mode scheme-object)
-      tr   (location treewalk_cb)                             mode          fn)))
+(define (tree-walk tree fn mode)
+  (with-callback fn
+   (lambda (callback)
+     (guard-errors tree-walk
+      ((foreign-safe-lambda int git_tree_walk
+        tree (function int (c-string tree-entry scheme-object)) treewalk-mode scheme-object)
+        tree (location treewalk_cb)                             mode          callback)))))
 
 ;; Maybe TODO tree-builder-filter
 

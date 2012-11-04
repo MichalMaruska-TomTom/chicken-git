@@ -12,8 +12,8 @@
    string->oid oid->string oid->path oid? merge-base
    repository? create-repository repository-open
    repository-path repository-ref repository-empty? repository-bare?
-   reference? reference references create-reference reference-resolve
-   reference-id reference-name reference-target reference-type
+   reference? reference references reference-for-each create-reference
+   reference-id reference-name reference-target reference-type reference-resolve
    reference-target-set reference-rename reference-delete
    branches create-branch branch-rename branch-delete
    commit? commit commits commits-fold create-commit commit-id
@@ -41,14 +41,13 @@
    diff-old-size diff-new-size diff-old-flags diff-new-flags
    config? config-open config-path config-get config-set config-unset
    file-status file-ignored?)
-  (import scheme
+  (import scheme lolevel
     (only srfi-1 iota)
     (only extras format)
     (only posix current-directory)
     (only files normalize-pathname make-pathname pathname-strip-directory)
     (except chicken repository-path)
-    (prefix git-lolevel git-)
-    (only lolevel record->vector number-of-bytes move-memory! tag-pointer pointer-tag))
+    (prefix git-lolevel git-))
   (require-library srfi-1 extras posix files lolevel git-lolevel)
 
 (define-for-syntax (s+ . args)
@@ -84,6 +83,13 @@
                           ((id) `(pointer->oid (,(s+ 'git- getter) (,->pointer obj))))
                           (else `(,(s+ 'git- getter) (,->pointer obj)))))))
                   attr))))))
+
+(define (with-static-object object proc)
+  (let ((object* #f))
+    (dynamic-wind
+     (lambda () (set! object* (object-evict object)))
+     (lambda () (proc object*))
+     (lambda () (object-unevict object*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Generics & OIDs
@@ -278,6 +284,9 @@
 (define (reference-rename ref name #!optional force)
   (git-reference-rename (reference->pointer ref) name force))
 
+(define (reference-for-each fn repo #!optional (type 'listall))
+  (git-reference-foreach (repository->pointer repo) type (lambda (name) (fn (reference repo name)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Branches
 
@@ -329,35 +338,34 @@
       (oid->pointer (->oid ref)))))
 
 (define (commits-fold kons knil repo #!key initial (hide '()) (sort 'none))
-  (call-with-current-continuation
-    (lambda (return)
-      (let ((walker #f))
-        (dynamic-wind
-          (lambda ()
-            (set! walker
-              (git-revwalk-new (repository->pointer repo))))
-          (lambda ()
-            ;; Sort mode, one of '(none topo time rev)
-            (git-revwalk-sorting walker sort)
-            ;; Set hidden commits. These exclude
-            ;; full branches from the traversal,
-            ;; rather than just the commits.
-            (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
-                      (map oid->pointer (map ->oid hide)))
-            ;; Set initial revision.
-            ;; Use HEAD if none is given (allowed? safe?).
-            ;; HEAD should always exist if there's at least one commit, so...
-            (git-revwalk-push walker
-              (condition-case
-                (oid->pointer
-                  (->oid (or initial (reference repo "HEAD"))))
-                ((git) (return '()))))
-            (let lp ((state knil))
-              (condition-case
-                (lp (kons (commit repo (pointer->oid (git-revwalk-next walker))) state))
-                ((git) state))))
-          (lambda ()
-            (git-revwalk-free walker)))))))
+  (let ((walker #f))
+    (dynamic-wind
+     (lambda ()
+       (set! walker
+         (git-revwalk-new (repository->pointer repo))))
+     (lambda ()
+       ;; Sort mode, one of '(none topo time rev)
+       (git-revwalk-sorting walker sort)
+       ;; Set hidden commits. These exclude
+       ;; full branches from the traversal,
+       ;; rather than just the commits.
+       (for-each (lambda (ptr) (git-revwalk-hide walker ptr))
+                 (map oid->pointer (map ->oid hide)))
+       ;; Set initial revision.
+       ;; Use HEAD if none is given (allowed? safe?).
+       ;; HEAD should always exist if there's at least one commit, so...
+       (condition-case
+         (begin
+           (git-revwalk-push walker
+            (oid->pointer
+             (->oid (or initial (reference repo "HEAD")))))
+           (let lp ((state knil))
+             (condition-case
+               (lp (kons (commit repo (pointer->oid (git-revwalk-next walker))) state))
+               ((git) state))))
+         ((git) knil)))
+     (lambda ()
+       (git-revwalk-free walker)))))
 
 (define (commits repo . rest)
   (apply commits-fold cons '() repo rest))
@@ -656,11 +664,13 @@
        (iota (tree-entrycount tree))))
 
 (define (tree-walk tree fn . mode)
-  (git-tree-walk
-    (tree->pointer tree)
-    (lambda (path te*)
-      (fn path (pointer->tree-entry te*)))
-    (optional mode 'post)))
+  (with-static-object tree
+   (lambda (object)
+     (git-tree-walk
+      (object->pointer object)
+      (lambda (path te*)
+        (fn path (pointer->tree-entry te*)))
+      (optional mode 'post)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Tree Builders

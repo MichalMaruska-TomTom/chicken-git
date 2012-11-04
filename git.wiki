@@ -183,6 +183,10 @@ is forced and the old reference will be overwritten.
 
 On success, the on-disk repository is updated immediately.
 
+<procedure>(reference-for-each procedure repository) => void</procedure>
+
+Invokes the given unary procedure on each reference in the repository.
+
 ==== Branch
 
 <procedure>(create-branch repository name target [force]) => reference</procedure>
