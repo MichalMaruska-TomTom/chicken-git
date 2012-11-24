@@ -726,14 +726,15 @@
 (define diff-binary?    diff-delta-binary)
 (define diff?           diff-delta?)
 
-(define (build-diff-list diff-ptrs)
+(define (build-diff-list diff-list)
   (let ((acc (list 0)))
     (git-diff-foreach
       (lambda (diff)
         (set-cdr! acc
-          (cons (pointer->diff-delta diff)
+          (cons (pointer->diff-delta
+                 (tag-pointer diff diff-list))
                 (cdr acc))))
-      diff-ptrs)
+      diff-list)
     (cdr acc)))
 
 (define diff
