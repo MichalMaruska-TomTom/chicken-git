@@ -7,9 +7,9 @@
            (car *required-chicken*))
   (exit 1))
 
-(compile -s -O2 -d0 -lgit2 git-lolevel.scm -J)
+(compile -s -O2 -d0 -w -J -lgit2 git-lolevel.scm)
+(compile -s -O2 -d0 -w -J -lgit2 git.scm)
 (compile -s -O2 -d0 git-lolevel.import.scm)
-(compile -s -O2 -d0 -lgit2 git.scm -J)
 (compile -s -O2 -d0 git.import.scm)
 
 (load "./git-lolevel.so")
@@ -25,4 +25,4 @@
 (install-extension 'git
   '("git-lolevel.so" "git-lolevel.import.so"
     "git.so" "git.import.so")
-  '((version "0.0.15")))
+  '((version "0.0.16")))

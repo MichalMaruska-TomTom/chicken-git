@@ -852,6 +852,7 @@ On success, the change is written immediately to disk.
 
 === History
 
+* 0.0.16 - libgit2 0.17.0 follow libgit2's diff & branch apis, improve C callback safety
 * 0.0.15 - libgit2 0.17.0 bindings & diff api changes
 * 0.0.14 - libgit2 0.17.0 compatibility
 * 0.0.13 - libgit2 0.16.0
