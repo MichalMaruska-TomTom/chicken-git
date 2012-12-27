@@ -140,6 +140,7 @@
 (define-foreign-type odb-object     (c-pointer "git_odb_object"))
 (define-foreign-type oid-shorten    (c-pointer "git_oid_shorten"))
 (define-foreign-type reference      (c-pointer "git_reference"))
+(define-foreign-type remote         (c-pointer "git_remote"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
 (define-foreign-type tag            (c-pointer "git_tag"))
@@ -465,6 +466,13 @@
 (define index-entry-stage          (foreign-lambda int git_index_entry_stage index-entry))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; indexer.h
+
+(define-foreign-record-type (indexer-stats git_indexer_stats)
+  (unsigned-int total indexer-stats-total)
+  (unsigned-int processed indexer-stats-processed))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; merge.h
 
 (define (merge-base repo a b)
@@ -669,8 +677,35 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; remote.h
-;;
-;; TODO
+
+(define/allocate remote remote-new
+  (git_remote_new (repository repo) (c-string name) (c-string url) (c-string fetch)))
+
+(define/retval remote-add
+  (git_remote_add (remote r) (repository repo) (c-string name) (c-string url)))
+
+(define/retval remote-load (git_remote_load (remote r) (repository repo) (c-string name)))
+(define/retval remote-save (git_remote_save (remote r)))
+
+(define/retval remote-set-fetchspec (git_remote_set_fetchspec (remote r) (c-string s)))
+(define/retval remote-set-pushspec  (git_remote_set_pushspec (remote r) (c-string s)))
+
+(define remote-free          (foreign-lambda void git_remote_free remote))
+(define remote-name          (foreign-lambda c-string git_remote_name remote))
+(define remote-url           (foreign-lambda c-string git_remote_url remote))
+(define remote-fetchspec     (foreign-lambda c-string git_remote_fetchspec remote))
+(define remote-pushspec      (foreign-lambda c-string git_remote_pushspec remote))
+(define remote-disconnect    (foreign-lambda void git_remote_disconnect remote))
+(define remote-connected     (foreign-lambda bool git_remote_connected remote))
+
+(define remote-valid-url     (foreign-lambda bool git_remote_valid_url c-string))
+(define remote-supported-url (foreign-lambda bool git_remote_supported_url c-string))
+
+;; TODO git_indexer_stats argument.
+(define/retval remote-connect  (git_remote_connect (remote r) (int d)))
+(define/retval remote-download (git_remote_download (remote r) (off-t b) (indexer-stats s)))
+
+;; TODO git_remote_ls git_remote_update_tips
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; revwalk.h

@@ -30,6 +30,7 @@
    index-entry-id index-entry-ctime index-entry-mtime
    odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
+   remote? remote-name remote-url remote-connected? remote-url-valid? remote-url-supported?
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
@@ -479,6 +480,18 @@
 
 (define (index-entry-mtime entry)
   (git-index-time-seconds (git-index-entry-mtime (index-entry->pointer entry))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Remote
+
+(define-git-record-type
+  (remote name url fetchspec pushspec connected valid-url supported-url)
+  (format "#<remote \"~A (~A)\">" (remote-name remote) (remote-url remote))
+  (git-remote-free))
+
+(define remote-connected? remote-connected)
+(define remote-url-valid? remote-valid-url)
+(define remote-url-supported? remote-supported-url)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Status
