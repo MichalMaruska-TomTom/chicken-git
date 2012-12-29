@@ -30,7 +30,9 @@
    index-entry-id index-entry-ctime index-entry-mtime
    odb? odb-open odb-has-object? odb-read odb-write odb-hash
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
-   remote? remote-name remote-url remote-connected? remote-url-valid? remote-url-supported?
+   remote? remotes remote-name remote-url remote-connect remote-disconnect remote-connected?
+   remote-url-valid? remote-url-supported? remote-pushspec remote-fetchspec
+   remote-pushspec-set! remote-fetchspec-set! refspec? refspec-source refspec-destination
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
    tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
@@ -485,13 +487,43 @@
 ;;; Remote
 
 (define-git-record-type
-  (remote name url fetchspec pushspec connected valid-url supported-url)
-  (format "#<remote \"~A (~A)\">" (remote-name remote) (remote-url remote))
+  (refspec src dst)
+  (format "#<refspec ~S>" (refspec-src refspec)))
+
+(define-git-record-type
+  (remote-head local? id local-id name)
+  (format "#<remote-head ~S>" (remote-head-name remote-head)))
+
+(define-git-record-type
+  (remote name url fetchspec pushspec connected disconnect)
+  (format "#<remote ~S>" (remote-name remote))
   (git-remote-free))
 
+(define refspec-source refspec-src)
+(define refspec-destination refspec-dst)
+
+(define remote-fetchspec
+  (let ((remote-fetchspec remote-fetchspec))
+    (lambda (remote) (pointer->refspec (remote-fetchspec remote)))))
+
+(define remote-pushspec
+  (let ((remote-pushspec remote-pushspec))
+    (lambda (remote) (pointer->refspec (remote-pushspec remote)))))
+
+(define (remote-fetchspec-set! r s) (git-remote-set-fetchspec (remote->pointer r) s))
+(define (remote-pushspec-set! r s)  (git-remote-set-pushspec  (remote->pointer r) s))
+
 (define remote-connected? remote-connected)
-(define remote-url-valid? remote-valid-url)
-(define remote-url-supported? remote-supported-url)
+(define remote-url-valid? git-remote-valid-url)
+(define remote-url-supported? git-remote-supported-url)
+
+(define (remote-connect remote #!optional (direction 'fetch))
+  (git-remote-connect (remote->pointer remote) direction))
+
+(define (remotes repo)
+  (let ((repo* (repository->pointer repo)))
+    (map (lambda (rem) (pointer->remote (git-remote-load repo* rem)))
+         (git-remote-list repo*))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Status

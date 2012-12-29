@@ -687,13 +687,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; remote.h
 
+(define-foreign-enum-type (direction int)
+  (direction->int int->direction)
+  ((fetch dir/fetch) GIT_DIR_FETCH)
+  ((push  dir/push)  GIT_DIR_PUSH))
+
+(define-foreign-record-type (remote-head git_remote_head)
+  (bool         local remote-head-local?)
+  ((struct oid) oid   remote-head-id)
+  ((struct oid) loid  remote-head-local-id)
+  (c-string     name  remote-head-name))
+
 (define/allocate remote remote-new
   (git_remote_new (repository repo) (c-string name) (c-string url) (c-string fetch)))
 
-(define/retval remote-add
-  (git_remote_add (remote r) (repository repo) (c-string name) (c-string url)))
+(define/allocate remote remote-load
+  (git_remote_load (repository repo) (c-string name)))
 
-(define/retval remote-load (git_remote_load (remote r) (repository repo) (c-string name)))
+(define/retval remote-add  (git_remote_add (remote r) (repository repo) (c-string name) (c-string url)))
 (define/retval remote-save (git_remote_save (remote r)))
 
 (define/retval remote-set-fetchspec (git_remote_set_fetchspec (remote r) (c-string s)))
@@ -702,17 +713,20 @@
 (define remote-free          (foreign-lambda void git_remote_free remote))
 (define remote-name          (foreign-lambda c-string git_remote_name remote))
 (define remote-url           (foreign-lambda c-string git_remote_url remote))
-(define remote-fetchspec     (foreign-lambda c-string git_remote_fetchspec remote))
-(define remote-pushspec      (foreign-lambda c-string git_remote_pushspec remote))
+(define remote-fetchspec     (foreign-lambda refspec git_remote_fetchspec remote))
+(define remote-pushspec      (foreign-lambda refspec git_remote_pushspec remote))
 (define remote-disconnect    (foreign-lambda void git_remote_disconnect remote))
 (define remote-connected     (foreign-lambda bool git_remote_connected remote))
-
 (define remote-valid-url     (foreign-lambda bool git_remote_valid_url c-string))
 (define remote-supported-url (foreign-lambda bool git_remote_supported_url c-string))
 
-;; TODO git_indexer_stats argument.
-(define/retval remote-connect  (git_remote_connect (remote r) (int d)))
-(define/retval remote-download (git_remote_download (remote r) (off-t b) (indexer-stats s)))
+(define/retval remote-connect (git_remote_connect (remote r) (direction d)))
+
+(define (remote-list repo)
+  (let ((sa (make-strarray)))
+    (guard-errors remote-list
+      ((foreign-lambda int git_remote_list strarray repository) sa repo))
+    (strarray-strings sa)))
 
 ;; TODO git_remote_ls git_remote_update_tips
 
