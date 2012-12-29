@@ -140,6 +140,7 @@
 (define-foreign-type odb-object     (c-pointer "git_odb_object"))
 (define-foreign-type oid-shorten    (c-pointer "git_oid_shorten"))
 (define-foreign-type reference      (c-pointer "git_reference"))
+(define-foreign-type refspec        (c-pointer "git_refspec"))
 (define-foreign-type remote         (c-pointer "git_remote"))
 (define-foreign-type repository     (c-pointer "git_repository"))
 (define-foreign-type revwalk        (c-pointer "git_revwalk"))
@@ -644,6 +645,14 @@
       ((foreign-safe-lambda int git_reference_foreach
         repository rtype (function int ((const c-string) scheme-object)) scheme-object)
         repo       flags (location reference_foreach_cb)                 callback)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; refspec.h
+
+(define refspec-src         (foreign-lambda c-string git_refspec_src refspec))
+(define refspec-dst         (foreign-lambda c-string git_refspec_dst refspec))
+(define refspec-src-matches (foreign-lambda bool git_refspec_src_matches refspec c-string))
+
+;; TODO git_refspec_transform
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
