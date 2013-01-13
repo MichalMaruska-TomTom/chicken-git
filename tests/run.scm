@@ -224,7 +224,8 @@
                  (test #t (reference? ref))
                  (set! refs (cons (reference-name ref) refs)))
                repo)
-              (test #t (equal? '("refs/heads/mimsy" "refs/heads/master") refs)))))
+              (test #t (equal? (list "refs/heads/master" "refs/heads/mimsy")
+                               (sort refs string<?))))))
 
         (test-group "reference deletion"
           (test-error (reference-delete 0))

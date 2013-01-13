@@ -12,8 +12,8 @@
 (compile -s -O2 -d0 git-lolevel.import.scm)
 (compile -s -O2 -d0 git.import.scm)
 
-(load "./git-lolevel.scm")
-(load "./git-lolevel.import.scm")
+(load "./git-lolevel.so")
+(load "./git-lolevel.import.so")
 (import (only git-lolevel libgit2-version))
 
 (when (not (equal? (libgit2-version) (cdr *required-libgit2*)))
@@ -25,4 +25,4 @@
 (install-extension 'git
   '("git-lolevel.so" "git-lolevel.import.so"
     "git.so" "git.import.so")
-  '((version "0.0.16")))
+  '((version "0.0.17")))
