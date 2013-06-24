@@ -125,7 +125,8 @@
   (unsigned-int flags_extended index-entry-extended)
   (c-string path index-entry-path))
 
-(define-foreign-record-type (index-entry-unmerged git_index_entry_unmerged)
+;; I cannot see this unmerge in header files, anymore.
+#;(define-foreign-record-type (index-entry-unmerged git_index_entry_unmerged)
   (unsigned-int (mode 3) index-entry-unmerged-mode)
   ((struct oid) (oid 3) index-entry-unmerged-oid)
   (c-string path index-entry-unmerged-path))
@@ -133,7 +134,7 @@
 (define-foreign-type commit         (c-pointer "git_commit"))
 (define-foreign-type config         (c-pointer "git_config"))
 (define-foreign-type blob*          (c-pointer "git_blob")) ; clash w/ built-in
-(define-foreign-type entry-unmerged (c-pointer "git_index_entry_unmerged"))
+;; (define-foreign-type entry-unmerged (c-pointer "git_index_entry_unmerged"))
 (define-foreign-type index          (c-pointer "git_index"))
 (define-foreign-type object         (c-pointer "git_object"))
 (define-foreign-type odb            (c-pointer "git_odb"))
@@ -460,8 +461,8 @@
 (define index-get                  (foreign-lambda index-entry git_index_get index unsigned-int))
 (define index-entrycount           (foreign-lambda unsigned-int git_index_entrycount index))
 (define index-entrycount-unmerged  (foreign-lambda unsigned-int git_index_entrycount_unmerged index))
-(define index-get-unmerged-bypath  (foreign-lambda index-entry-unmerged git_index_get_unmerged_bypath index c-string))
-(define index-get-unmerged-byindex (foreign-lambda index-entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
+;(define index-get-unmerged-bypath  (foreign-lambda index-entry-unmerged git_index_get_unmerged_bypath index c-string))
+;(define index-get-unmerged-byindex (foreign-lambda index-entry-unmerged git_index_get_unmerged_byindex index unsigned-int))
 (define index-entry-stage          (foreign-lambda int git_index_entry_stage index-entry))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
