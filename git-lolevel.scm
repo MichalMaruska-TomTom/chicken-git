@@ -198,7 +198,9 @@
       ((foreign-lambda int git_branch_list strarray repository btype) sa repo flags))
     (strarray-strings sa)))
 
-(define/retval branch-delete (git_branch_delete (repository repo) (c-string name) (btype type)))
+(define/retval branch-delete
+  (git_branch_delete (reference branch)))
+
 (define/retval branch-move   (git_branch_move   (repository repo) (c-string old) (c-string new) (bool force)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
