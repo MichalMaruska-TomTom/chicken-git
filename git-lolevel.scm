@@ -643,13 +643,16 @@
 (define-external (reference_foreach_cb ((const c-string) name) (scheme-object fn)) int
   ((callback-lookup fn) name))
 
-(define (reference-foreach repo flags fn)
+(define (reference-foreach repo ;flags
+			   fn)
   (with-callback fn
    (lambda (callback)
      (guard-errors reference-foreach
       ((foreign-safe-lambda int git_reference_foreach
-        repository rtype (function int ((const c-string) scheme-object)) scheme-object)
-        repo       flags (location reference_foreach_cb)                 callback)))))
+        repository ;rtype
+	(function int ((const c-string) scheme-object)) scheme-object)
+        repo   ;    flags
+	(location reference_foreach_cb)                 callback)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 ;; repository.h
