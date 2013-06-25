@@ -634,10 +634,15 @@
 (define/retval reference-reload     (git_reference_reload (reference ref)))
 (define/retval reference-packall    (git_reference_packall (repository repo)))
 
-(define (reference-list repo flags)
+(define (reference-list repo)		;flags
   (let ((sa (make-strarray)))
     (guard-errors reference-list
-      ((foreign-lambda int git_reference_list strarray repository rtype) sa repo flags))
+      ((foreign-lambda int
+		       git_reference_list
+		       strarray repository
+		       ;rtype
+		       ) sa repo ;flags
+			 ))
     (strarray-strings sa)))
 
 (define-external (reference_foreach_cb ((const c-string) name) (scheme-object fn)) int
