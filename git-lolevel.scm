@@ -362,7 +362,9 @@
   ((struct diff-file) new_file   diff-delta-new-file)
   (delta              status     diff-delta-status)
   (unsigned-int       similarity diff-delta-similarity)
-  (int                binary     diff-delta-binary))
+  (int flags diff-delta-flags)
+  ;(int                binary     diff-delta-binary)
+  )
 
 (define diff-list-free (foreign-lambda void git_diff_list_free diff-list))
 
