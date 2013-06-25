@@ -328,7 +328,8 @@
 ;; diff.h
 
 (define-foreign-type diff-list (c-pointer "git_diff_list"))
-(define-foreign-type diff-file-fn (c-pointer "git_diff_file_fn"))
+;;fixme:  (define-foreign-type diff-file-fn (c-pointer "git_diff_file_fn"))
+(define-foreign-type diff-file-fn (c-pointer "git_diff_file_cb"))
 
 (define-foreign-enum-type (delta int)
   (delta->int int->delta)
@@ -394,13 +395,21 @@
         diff-list scheme-object diff-file-fn            c-pointer c-pointer)
         diffs     callback      (location diff_file_fn) #f        #f)))))
 
-(define (diff-blobs old new fn diffs)
+(define (diff-blobs old old-as-path new new-as-path fn diffs)
   (with-callback fn
    (lambda (callback)
      (guard-errors diff-blobs
       ((foreign-safe-lambda int git_diff_blobs
-        blob* blob* diff-options scheme-object diff-file-fn            c-pointer c-pointer)
-        old   new   #f           callback      (location diff_file_fn) #f        #f)))))
+        blob* c-string
+	blob* c-string
+	diff-options
+	diff-file-fn c-pointer c-pointer scheme-object)
+
+        old   old-as-path new new-as-path  #f
+	(location diff_file_fn) #f        #f
+	;; scheme-object?
+	callback
+	)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; errors.h
