@@ -1,5 +1,5 @@
 (define *required-chicken* '("4.7.0"  . #(4 7 0)))
-(define *required-libgit2* '("0.17.0" . #(0 17 0)))
+(define *required-libgit2* '("0.18.0" . #(0 18 0)))
 
 (when (string<? (chicken-version) (car *required-chicken*))
   (fprintf (current-error-port)
@@ -18,11 +18,11 @@
 
 (when (not (equal? (libgit2-version) (cdr *required-libgit2*)))
   (fprintf (current-error-port)
-           "\n  git: This extension requires libgit2 ~a."
-           (car *required-libgit2*))
+           "\n  git: This extension requires libgit2 ~a. Found ~a"
+           (car *required-libgit2*) (libgit2-version))
   (exit 1))
 
 (install-extension 'git
   '("git-lolevel.so" "git-lolevel.import.so"
     "git.so" "git.import.so")
-  '((version "0.0.17")))
+  '((version "0.0.18")))
