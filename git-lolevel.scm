@@ -287,8 +287,24 @@
 (define/allocate config config-open-global (git_config_open_global))
 (define/allocate config config-open-ondisk (git_config_open_ondisk (c-string path)))
 (define/retval config-delete (git_config_delete (config cfg) (c-string name)))
-(define/retval config-add-file (git_config_add_file (config cfg) (config-file file) (int priority)))
-(define/retval config-add-file-ondisk (git_config_add_file_ondisk (config cfg) (c-string path) (int priority)))
+;; fixme:
+;(define/retval config-add-file (git_config_add_file (config cfg)
+
+(define-foreign-enum-type (git-config-level int)
+  ;; eh?
+  (config-level->int int->config-level)
+  ;;
+  ((system config-level/system) GIT_CONFIG_LEVEL_SYSTEM)
+  ;((remote btype/remote) GIT_BRANCH_REMOTE)
+  )
+
+;;  fixme: (config-file file) (int priority)))
+(define/retval config-add-file-ondisk
+  (git_config_add_file_ondisk
+   (config cfg)
+   (c-string path)
+   (git-config-level level)
+   (int priority)))
 
 (define-syntax define/config-path
   (lambda (e . r)
