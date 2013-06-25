@@ -636,7 +636,8 @@
 
 (define/allocate reference reference-resolve (git_reference_resolve (reference ref)))
 
-(define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
+(define/allocate reference reference-set-target (git_reference_set_target (reference ref) (c-string target)))
+;(define/retval reference-set-target (git_reference_set_target (reference ref) (c-string target)))
 (define/retval reference-set-oid    (git_reference_set_oid (reference ref) (oid id)))
 (define/retval reference-rename     (git_reference_rename (reference ref) (c-string name) (bool force)))
 (define/retval reference-delete     (git_reference_delete (reference ref)))
