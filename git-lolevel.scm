@@ -429,7 +429,8 @@
   ((ambiguous    err/ambiguous)   GIT_EAMBIGUOUS)
   ((bufs         err/bufs)        GIT_EBUFS)
   ((passthrough  err/passthrough) GIT_PASSTHROUGH)
-  ((revwalkover  err/revwalkover) GIT_REVWALKOVER))
+  ;((revwalkover  err/revwalkover) GIT_REVWALKOVER)
+  )
 
 (define-foreign-enum-type (error-t int)
   (error->int int->error)
