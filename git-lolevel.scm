@@ -850,8 +850,12 @@
    (lambda (callback)
      (guard-errors tree-walk
       ((foreign-safe-lambda int git_tree_walk
-        tree (function int (c-string tree-entry scheme-object)) treewalk-mode scheme-object)
-        tree (location treewalk_cb)                             mode          callback)))))
+        tree treewalk-mode
+	(function int (c-string tree-entry scheme-object))
+	scheme-object)
+        tree mode
+	(location treewalk_cb)
+	callback)))))
 
 ;; Maybe TODO tree-builder-filter
 
