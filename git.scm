@@ -456,9 +456,13 @@
                (else (git-git-error 'index-ref "Invalid key" key)))))
       ((unmerged)
        (pointer->index-entry
-         (cond ((string? key) (git-index-get-unmerged-bypath ix* key))
-               ((number? key) (git-index-get-unmerged-byindex ix* key))
-               (else (git-git-error 'index-ref "Invalid key" key)))))
+	;; fixme:
+         (cond
+	  ((string? key) (error 'obsolete))
+	  ;;(git-index-get-unmerged-bypath ix* key))
+	  ((number? key) (error 'obsolete))
+	  ;;(git-index-get-unmerged-byindex ix* key))
+	  (else (git-git-error 'index-ref "Invalid key" key)))))
       (else (git-git-error 'index-ref
                            "Invalid index type specifier"
                            type)))))
