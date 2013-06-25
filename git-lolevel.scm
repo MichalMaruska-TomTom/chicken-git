@@ -603,8 +603,8 @@
   ((invalid  rtype/invalid)  GIT_REF_INVALID)
   ((oid      rtype/oid)      GIT_REF_OID)
   ((symbolic rtype/symbolic) GIT_REF_SYMBOLIC)
-  ((packed   rtype/packed)   GIT_REF_PACKED)
-  ((haspeel  rtype/haspeel)  GIT_REF_HAS_PEEL)
+  ;((packed   rtype/packed)   GIT_REF_PACKED)
+  ;((haspeel  rtype/haspeel)  GIT_REF_HAS_PEEL)
   ((listall  rtype/listall)  GIT_REF_LISTALL))
 
 (define/allocate reference reference-lookup
