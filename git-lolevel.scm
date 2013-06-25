@@ -463,7 +463,9 @@
 
 (define index-clear (foreign-lambda void git_index_clear index))
 (define index-free  (foreign-lambda void git_index_free index))
-(define index-find  (foreign-lambda int git_index_find index c-string))
+(define index-find  (foreign-lambda int git_index_find
+				    int ;;(int pos)
+				    index c-string))
 (define index-uniq  (foreign-lambda void git_index_uniq index))
 
 (define/retval index-read   (git_index_read (index ix)))
