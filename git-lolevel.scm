@@ -470,9 +470,15 @@
 
 (define/retval index-read   (git_index_read (index ix)))
 (define/retval index-write  (git_index_write (index ix)))
-(define/retval index-add    (git_index_add (index ix) (c-string path) (int stage)))
+(define/retval index-add    (git_index_add (index ix)
+					   (index-entry source-entry)
+					   ;(c-string path) (int stage)
+					   ))
 (define/retval index-append (git_index_append (index ix) (c-string path) (int stage)))
-(define/retval index-remove (git_index_remove (index ix) (int pos)))
+(define/retval index-remove (git_index_remove (index ix)
+					      (c-string path) (int stage)
+					      ;(int pos)
+					      ))
 
 (define index-get                  (foreign-lambda index-entry git_index_get index unsigned-int))
 (define index-entrycount           (foreign-lambda unsigned-int git_index_entrycount index))
