@@ -716,7 +716,9 @@
 
 ;; The `diff-delta` record is renamed to just `diff`.
 (define-git-record-type
-  (diff-delta old-file new-file status similarity binary)
+  (diff-delta old-file new-file status similarity
+	      ;binary
+	      )
   (format "#<diff ~S>" (diff-file-path (diff-new-file diff-delta))))
 
 (define (diff-file-id df) (pointer->oid (diff-file-oid df)))
@@ -727,7 +729,7 @@
 
 (define diff-status     diff-delta-status)
 (define diff-similarity diff-delta-similarity)
-(define diff-binary?    diff-delta-binary)
+;; (define diff-binary?    diff-delta-binary)
 (define diff?           diff-delta?)
 
 (define (build-diff-list diff-list)
