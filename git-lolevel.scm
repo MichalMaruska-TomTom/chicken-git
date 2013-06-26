@@ -72,6 +72,9 @@
          (set! callback-index (+ index 1))
          index)))))
 
+;; mmc:
+;; execute `proc', while keeping c available in the hash.
+;; sort of GC tool?
 (define (with-callback c proc)
   (let ((callback #f))
     (dynamic-wind
@@ -274,19 +277,34 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; config.h
 
-(define-foreign-record-type (config-file git_config_file)
-  (config cfg config-file-config)
-  ((function int (config-file)) open config-file-open)
-  ((function int (config-file c-string (pointer c-string))) get config-file-get)
-  ((function int (config-file c-string c-string)) set config-file-set)
-  ((function int (config-file (function int (c-string c-string c-pointer)) c-pointer)) foreach config-file-foreach)
-  ((function int (config-file)) free config-file-free))
+;; I cannot find the struct definition!
+;; in config.h in sources.  struct git_config {
+;;	git_refcount rc;
+;;	git_vector files;
+;; };
+
+;; seems git_config_backend:
+
+;; (define-foreign-record-type (config-backend git_config) ;_file
+;;   (config cfg config-file-config)
+
+;;   ((function int (config-file)) open config-file-open)
+;;   ((function int (config-file c-string (pointer c-string))) get config-file-get)
+;;   ((function int (config-file c-string c-string)) set config-file-set)
+;;   ((function int (config-file (function int (c-string c-string c-pointer)) c-pointer)) foreach config-file-foreach)
+;;   ((function int (config-file)) free config-file-free))
+
+
 
 (define config-free (foreign-lambda void git_config_free config))
 (define/allocate config config-new (git_config_new))
-(define/allocate config config-open-global (git_config_open_global))
+;; (define/allocate config config-open-global (git_config_open_global))
+
+(define/allocate config config-find-open-default (git_config_open_default))
+
 (define/allocate config config-open-ondisk (git_config_open_ondisk (c-string path)))
-(define/retval config-delete (git_config_delete (config cfg) (c-string name)))
+(define/retval config-delete-entry (git_config_delete_entry (config cfg) (c-string name)))
+
 ;; fixme:
 ;(define/retval config-add-file (git_config_add_file (config cfg)
 
@@ -315,8 +333,9 @@
              ((foreign-lambda int ,(caddr e) scheme-pointer unsigned-int) str len))
            (substring str 0 (string-index str #\x00)))))))
 
-(define/config-path config-find-global git_config_find_global)
-(define/config-path config-find-system git_config_find_system)
+; mmc:  char  length ?
+; (define/config-path config-find-global git_config_find_global)
+;(define/config-path config-find-system git_config_find_system)
 
 (define-syntax define/config
   (syntax-rules (getter setter)
@@ -479,7 +498,12 @@
 
 (define index-clear (foreign-lambda void git_index_clear index))
 (define index-free  (foreign-lambda void git_index_free index))
-(define index-find  (foreign-lambda int git_index_find
+
+;;# size
+;; (define/allocate commit commit-parent (git_commit_parent (commit cmt) (unsigned-int n)))
+(define/allocate off-t index-find (git_index_find (index index) (c-string path)))
+#;(define index-find
+  (foreign-lambda int git_index_find
 				    int ;;(int pos)
 				    index c-string))
 (define index-uniq  (foreign-lambda void git_index_uniq index))
@@ -491,12 +515,15 @@
 					   ;(c-string path) (int stage)
 					   ))
 (define/retval index-append (git_index_append (index ix) (c-string path) (int stage)))
+;;
 (define/retval index-remove (git_index_remove (index ix)
-					      (c-string path) (int stage)
+					      (c-string path)
+					      (int stage)
 					      ;(int pos)
 					      ))
 
-(define index-get                  (foreign-lambda index-entry git_index_get index unsigned-int))
+(define index-get                  (foreign-lambda index-entry git_index_get_byindex index
+						   unsigned-int))
 (define index-entrycount           (foreign-lambda unsigned-int git_index_entrycount index))
 (define index-entrycount-unmerged  (foreign-lambda unsigned-int git_index_entrycount_unmerged index))
 ;(define index-get-unmerged-bypath  (foreign-lambda index-entry-unmerged git_index_get_unmerged_bypath index c-string))
@@ -661,6 +688,7 @@
 (define/retval reference-reload     (git_reference_reload (reference ref)))
 (define/retval reference-packall    (git_reference_packall (repository repo)))
 
+;; fixme!
 (define (reference-list repo)		;flags
   (let ((sa (make-strarray)))
     (guard-errors reference-list
@@ -847,7 +875,7 @@
 (define/allocate object tree-entry-to-object
   (git_tree_entry_to_object (repository repo) (tree-entry entry)))
 
-(define (tree-create-fromindex ix)
+#;(define (tree-create-fromindex ix)
   (let ((id (make-oid)))
     (guard-errors tree-create-fromindex
       ((foreign-lambda int git_tree_create_fromindex oid index) id ix))

@@ -32,7 +32,8 @@
    odb-object? odb-object-id odb-object-data odb-object-size odb-object-type
    signature? make-signature signature-name signature-email signature-time signature-time-offset
    tag? tag tags create-tag tag-id tag-type tag-name tag-message tag-delete tag-tagger tag-target tag-peel
-   tree? tree create-tree tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
+   tree? tree ;create-tree
+   tree-id tree-entrycount tree-ref tree->list tree-subtree tree-walk
    tree-entry? tree-entry-id tree-entry-name tree-entry-attributes tree-entry-type tree-entry->object
    make-tree-builder tree-builder-ref tree-builder-insert tree-builder-remove tree-builder-clear tree-builder-write
    diff? diff diff-similarity diff-status diff-path diff-old-file diff-new-file
@@ -250,9 +251,12 @@
       (repository->pointer repo)
       name)))
 
-(define (references repo #!optional (type 'listall))
-  (map (lambda (ref) (reference repo ref))
-       (git-reference-list (repository->pointer repo) type)))
+;; fixme! this type is non-implemented!
+(define (references repo)			  ; #!optional (type 'listall)
+  (git-reference-list (repository->pointer repo)) ;type
+  (map (lambda (ref)
+	 (reference repo ref))
+       (git-reference-list (repository->pointer repo)))) ;type
 
 (define (create-reference repo #!key name target symbolic force)
   (let ((repo* (repository->pointer repo)))
@@ -438,9 +442,12 @@
 (define (index-remove ix ref)
   (let ((ix* (index->pointer ix)))
     (cond ((string? ref)
+	   (display "string\n")
            (and-let* ((pos (index-find ix ref)))
              (git-index-remove ix* pos)))
+
           ((number? ref)
+	   (display "number\n")
            (git-index-remove ix* ref))
           (else #f))))
 
@@ -577,9 +584,14 @@
     (if (null? tags)
       (reverse acc)
       (lp (cdr tags)
-          (condition-case
-            (cons (tag repo (reference-id (car tags))) acc)
-            ((git) acc))))))
+          (condition-case		;mmc:?
+            (cons
+	     ;; get the tag out of ...
+	     (tag repo (reference-id (car tags))) acc)
+	    ;; what  (git) ??
+            ((git)
+	     ;; exception `git' -> acc
+	     acc))))))
 
 (define (tag-peel tag) (pointer->object (git-tag-peel (tag->pointer tag))))
 (define (tag-tagger tag) (pointer->signature (git-tag-tagger (tag->pointer tag))))
@@ -651,8 +663,8 @@
       (repository->pointer repo)
       (tree-entry->pointer entry))))
 
-(define (create-tree repo ix)
-  (tree repo (pointer->oid (git-tree-create-fromindex (index->pointer ix)))))
+;(define (create-tree repo ix)
+;  (tree repo (pointer->oid (git-tree-create-fromindex (index->pointer ix)))))
 
 ;; Returns a list of tree entries.
 ;; A repository can optionally be
@@ -797,8 +809,9 @@
 
 (define (config-path #!optional (type 'user))
   (case type
-    ((user)   (git-config-find-global))
-    ((system) (git-config-find-system))
+    ; fixme:
+    ((user) (error 'non-implemented));;  (git-config-find-global))
+    ;((system) (git-config-find-system))
     (else (git-git-error 'config-open
                          "Invalid configuration path type"
                          type))))
@@ -835,6 +848,6 @@
    value))
 
 (define (config-unset cfg name)
-  (git-config-delete (config->pointer cfg) name))
+  (git-config-delete-entry (config->pointer cfg) name))
 
 )
